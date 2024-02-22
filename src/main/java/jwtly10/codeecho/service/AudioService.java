@@ -10,6 +10,7 @@ import javax.sound.sampled.*;
 import javax.swing.*;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.net.http.HttpClient;
 
 public class AudioService {
     private static volatile boolean STOP_RECORDING = false;
@@ -57,7 +58,7 @@ public class AudioService {
                 targetLine.stop();
                 targetLine.close();
 
-                ProxyService proxyService = new ProxyService();
+                ProxyService proxyService = new ProxyService(HttpClient.newHttpClient());
 
                 try {
                     TranscriptResponse result = proxyService.transcribeAudio(out.toByteArray());

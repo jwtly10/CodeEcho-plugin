@@ -15,7 +15,10 @@ java {
 }
 
 dependencies {
-    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.12.5")
+    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.16.1")
+    testImplementation("org.mockito:mockito-core:5.10.0")
+    testImplementation("org.junit.jupiter:junit-jupiter-api:5.10.2")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.10.2")
 }
 
 // Configure Gradle IntelliJ Plugin
@@ -27,6 +30,10 @@ intellij {
     plugins.set(listOf(/* Plugin Dependencies */))
 }
 
+tasks.test {
+    useJUnitPlatform()
+}
+
 tasks {
     // Set the JVM compatibility versions
 //    withType<JavaCompile> {
@@ -36,6 +43,7 @@ tasks {
 //    withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
 //        kotlinOptions.jvmTarget = "17"
 //    }
+
 
     buildSearchableOptions {
         enabled = false
