@@ -2,6 +2,7 @@ package jwtly10.codeecho.toolWindow.ui;
 
 import com.intellij.openapi.diagnostic.Logger;
 import jwtly10.codeecho.callback.AsyncCallback;
+import jwtly10.codeecho.model.RecordModel;
 import jwtly10.codeecho.service.AudioService;
 import jwtly10.codeecho.toolWindow.component.CustomProgressBar;
 
@@ -49,11 +50,16 @@ public class CodeEchoUILogic {
                 }
 
                 @Override
-                public void onResult(byte[] output) {
-                    audioData[0] = output;
+                public void onResult(RecordModel output) {
+                    audioData[0] = output.getAudio();
+                    System.out.printf("Transcript: %s\nConfidence: %f\n",
+                            output.getTrans().getTranscript(),
+                            output.getTrans().getConfidence());
+
+                    // Reset flags
                     recordButton.setText("Start Listening");
                     isRecording[0] = false;
-                    progressBar.updateDuration(audioService.estimateDuration(output));
+                    progressBar.updateDuration(audioService.estimateDuration(output.getAudio()));
                     playButton.setEnabled(true);
                 }
             });

@@ -14,6 +14,10 @@ java {
     sourceCompatibility = JavaVersion.VERSION_17
 }
 
+dependencies {
+    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.12.5")
+}
+
 // Configure Gradle IntelliJ Plugin
 // Read more: https://plugins.jetbrains.com/docs/intellij/tools-gradle-intellij-plugin.html
 intellij {
@@ -33,7 +37,7 @@ tasks {
 //        kotlinOptions.jvmTarget = "17"
 //    }
 
-    buildSearchableOptions{
+    buildSearchableOptions {
         enabled = false
     }
 

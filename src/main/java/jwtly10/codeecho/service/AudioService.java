@@ -3,6 +3,8 @@ package jwtly10.codeecho.service;
 import com.intellij.openapi.diagnostic.Logger;
 import jwtly10.codeecho.callback.AsyncCallback;
 import jwtly10.codeecho.exception.AudioException;
+import jwtly10.codeecho.model.RecordModel;
+import jwtly10.codeecho.model.TranscriptResponse;
 
 import javax.sound.sampled.*;
 import javax.swing.*;
@@ -24,7 +26,7 @@ public class AudioService {
      * @param duration duration in milliseconds
      * @param callback callback to be called when the recording is stopped, returns the recorded audio data
      */
-    public void record(int duration, AsyncCallback<byte[]> callback) {
+    public void record(int duration, AsyncCallback<RecordModel> callback) {
         Thread recordingThread = new Thread(() -> {
             try {
                 log.info("Recording started");
@@ -55,12 +57,18 @@ public class AudioService {
                 targetLine.stop();
                 targetLine.close();
 
-                if (callback != null) {
-                    SwingUtilities.invokeLater(() -> callback.onResult(out.toByteArray()));
+                ProxyService proxyService = new ProxyService();
+
+                try {
+                    TranscriptResponse result = proxyService.transcribeAudio(out.toByteArray());
+                    RecordModel res = new RecordModel(result, out.toByteArray());
+
+                    if (callback != null) {
+                        SwingUtilities.invokeLater(() -> callback.onResult(res));
+                    }
+                } catch (Exception e) {
+                    throw new RuntimeException("Transcription failed", e);
                 }
-
-                throw new LineUnavailableException("Recording failed.");
-
             } catch (Exception ex) {
                 log.error("Recording failed", ex);
                 // TODO Handle different error cases and feedback to the user
