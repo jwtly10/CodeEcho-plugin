@@ -22,7 +22,6 @@ import javax.swing.border.CompoundBorder;
 import java.awt.*;
 import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -111,7 +110,7 @@ public class CodeEchoToolWindowFactory implements ToolWindowFactory, DumbAware {
             textField.setLineWrap(true);
             textField.setWrapStyleWord(true);
             textField.setBorder(BorderFactory.createLineBorder(JBColor.BLACK));
-            textField.setForeground(JBColor.GRAY);
+            textField.setForeground(JBColor.BLACK);
             Border margin = JBUI.Borders.empty(10);
             textField.setBorder(new CompoundBorder(textField.getBorder(), margin));
             textField.addFocusListener(new FocusListener() {
@@ -119,14 +118,14 @@ public class CodeEchoToolWindowFactory implements ToolWindowFactory, DumbAware {
                 public void focusGained(FocusEvent e) {
                     if (textField.getText().equals("Message CodeEcho...")) {
                         textField.setText("");
-                        textField.setForeground(JBColor.WHITE);
+                        textField.setForeground(JBColor.BLACK);
                     }
                 }
 
                 @Override
                 public void focusLost(FocusEvent e) {
                     if (textField.getText().isEmpty()) {
-                        textField.setForeground(JBColor.WHITE);
+                        textField.setForeground(JBColor.BLACK);
                         textField.setText("Message CodeEcho...");
                     }
                 }
@@ -222,11 +221,12 @@ public class CodeEchoToolWindowFactory implements ToolWindowFactory, DumbAware {
                 textField.requestFocusInWindow();
                 messageWindowUI.set(openSession.getMessages());
             });
-            try {
-                ChatPersistence.saveSessions(List.of(openSession));
-            } catch (IOException e) {
-                System.out.println("Error saving session");
-            }
+            // Temp comment, dont save session so we dont have bad data
+//            try {
+//                ChatPersistence.saveSessions(List.of(openSession));
+//            } catch (IOException e) {
+//                System.out.println("Error saving session");
+//            }
 
             return true;
         }

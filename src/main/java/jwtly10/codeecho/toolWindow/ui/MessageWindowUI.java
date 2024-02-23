@@ -3,7 +3,6 @@ package jwtly10.codeecho.toolWindow.ui;
 import com.intellij.ui.components.JBScrollPane;
 import jwtly10.codeecho.model.ChatGPTMessage;
 import jwtly10.codeecho.model.ChatGPTRole;
-import org.jetbrains.annotations.NotNull;
 
 import javax.swing.*;
 import java.awt.*;
@@ -20,12 +19,26 @@ public class MessageWindowUI extends JPanel {
         setOpaque(false);
 
         JPanel messagesPanel = new JPanel();
-        messagesPanel.setLayout(new BoxLayout(messagesPanel, BoxLayout.Y_AXIS));
+        messagesPanel.setLayout(new GridBagLayout());
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.gridwidth = GridBagConstraints.REMAINDER;
+        gbc.weightx = 1;
+        gbc.weighty = 0;
 
         for (ChatGPTMessage message : messages) {
-            JPanel messageContainer = createMessageContainer(message);
-            messagesPanel.add(messageContainer);
+            MessageComponent messageComponent = new MessageComponent(message);
+
+            if (message.getRole().equals(ChatGPTRole.user)) {
+                gbc.anchor = GridBagConstraints.LINE_END;
+            } else {
+                gbc.anchor = GridBagConstraints.LINE_START;
+            }
+            messagesPanel.add(messageComponent, gbc);
         }
+
+        gbc.weighty = 1;
+        Component filler = Box.createVerticalGlue();
+        messagesPanel.add(filler, gbc);
 
         JBScrollPane scrollPane = new JBScrollPane(messagesPanel);
         scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
@@ -42,16 +55,5 @@ public class MessageWindowUI extends JPanel {
             JScrollBar verticalScrollBar = scrollPane.getVerticalScrollBar();
             verticalScrollBar.setValue(verticalScrollBar.getMaximum());
         });
-    }
-
-    @NotNull
-    private static JPanel createMessageContainer(ChatGPTMessage message) {
-        JPanel messageContainer = new JPanel();
-        FlowLayout flowLayout = (message.getRole().equals(ChatGPTRole.user)) ? new FlowLayout(FlowLayout.RIGHT) : new FlowLayout(FlowLayout.LEFT);
-        messageContainer.setLayout(flowLayout);
-
-        MessageComponent messageComponent = new MessageComponent(message);
-        messageContainer.add(messageComponent);
-        return messageContainer;
     }
 }
