@@ -1,5 +1,6 @@
 package jwtly10.codeecho.toolWindow;
 
+import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.DumbAware;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.wm.ToolWindow;
@@ -7,11 +8,14 @@ import com.intellij.openapi.wm.ToolWindowFactory;
 import com.intellij.ui.JBColor;
 import com.intellij.ui.content.Content;
 import com.intellij.util.ui.JBUI;
+import jwtly10.codeecho.callback.AsyncCallback;
 import jwtly10.codeecho.model.ChatGPTMessage;
+import jwtly10.codeecho.model.ChatGPTRequest;
 import jwtly10.codeecho.model.ChatGPTRole;
 import jwtly10.codeecho.model.ChatGPTSession;
 import jwtly10.codeecho.persistance.ChatPersistence;
 import jwtly10.codeecho.service.AudioService;
+import jwtly10.codeecho.service.ProxyService;
 import jwtly10.codeecho.toolWindow.component.CustomProgressBar;
 import jwtly10.codeecho.toolWindow.ui.MessageWindowUI;
 import org.jetbrains.annotations.NotNull;
@@ -22,6 +26,7 @@ import javax.swing.border.CompoundBorder;
 import java.awt.*;
 import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
+import java.net.http.HttpClient;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -30,6 +35,8 @@ import static jwtly10.codeecho.toolWindow.ui.CodeEchoUILogic.createPlayButton;
 import static jwtly10.codeecho.toolWindow.ui.CodeEchoUILogic.createRecordButton;
 
 public class CodeEchoToolWindowFactory implements ToolWindowFactory, DumbAware {
+
+    private static final Logger log = Logger.getInstance(CodeEchoToolWindowFactory.class);
 
 
     @Override
@@ -62,8 +69,7 @@ public class CodeEchoToolWindowFactory implements ToolWindowFactory, DumbAware {
                 sessions = ChatPersistence.loadSessions();
             } catch (Exception e) {
                 // TODO: Handle what happens when the sessions cannot be loaded
-                System.out.println("Error loading sessions");
-                e.printStackTrace();
+                log.error("Error loading sessions", e);
             }
 
             this.messageWindowUI = new MessageWindowUI();
@@ -131,34 +137,25 @@ public class CodeEchoToolWindowFactory implements ToolWindowFactory, DumbAware {
                 }
             });
 
-            sendButton.setEnabled(false);
-
             textField.addKeyListener(new java.awt.event.KeyAdapter() {
                 public void keyReleased(java.awt.event.KeyEvent evt) {
                     if ((evt.getKeyCode() == java.awt.event.KeyEvent.VK_ENTER) && evt.isControlDown()) {
-                        String text = textField.getText();
-                        if (!sendMessage(new ChatGPTMessage(ChatGPTRole.user, text), textField)) {
-                            textField.setText("Message CodeEcho...");
-                            sendButton.setEnabled(false);
+                        if (canWeSendMessage(new ChatGPTMessage(ChatGPTRole.user, textField.getText()), textField)) {
+                            sendNewChatMessage(textField);
+                            return;
                         }
                     }
-
-                    // Enable send button if the text field is not empty
-                    sendButton.setEnabled(!textField.getText().isEmpty() || !textField.getText().equals("Message CodeEcho..."));
                 }
             });
 
             sendButton.addActionListener(e -> {
-                String text = textField.getText();
-                if (!sendMessage(new ChatGPTMessage(ChatGPTRole.user, text), textField)) {
-                    textField.setText("Message CodeEcho...");
-                    sendButton.setEnabled(false);
+                if (canWeSendMessage(new ChatGPTMessage(ChatGPTRole.user, textField.getText()), textField)) {
+                    sendNewChatMessage(textField);
                 }
             });
 
-
+            /* TODO: Remove this message label code spaghetti */
             JLabel messageLabel = new JLabel("Error messages go here");
-
 
             AudioService audioService = new AudioService();
             CustomProgressBar progressBar = new CustomProgressBar(5000);
@@ -200,9 +197,7 @@ public class CodeEchoToolWindowFactory implements ToolWindowFactory, DumbAware {
             buttonPanelInner.add(sendButton, gbc);
             buttonPanel.add(buttonPanelInner, BorderLayout.SOUTH);
 
-
             pinPanel.add(buttonPanel, BorderLayout.SOUTH);
-
 
             tmpPanel.add(innerPanel, BorderLayout.NORTH);
             inputPanel.add(tmpPanel);
@@ -211,24 +206,54 @@ public class CodeEchoToolWindowFactory implements ToolWindowFactory, DumbAware {
             return inputPanel;
         }
 
-        private boolean sendMessage(ChatGPTMessage message, JTextArea textField) {
-            if (message.getContent() == null || message.getContent().isEmpty() || message.getContent().equals("Message CodeEcho...")) {
-                return false;
-            }
-            openSession.addMessage(message);
-            SwingUtilities.invokeLater(() -> {
-                textField.setText("");
-                textField.requestFocusInWindow();
-                messageWindowUI.addNewMessage(message);
-            });
-            // Temp comment, dont save session so we dont have bad data
-//            try {
-//                ChatPersistence.saveSessions(List.of(openSession));
-//            } catch (IOException e) {
-//                System.out.println("Error saving session");
-//            }
+        private void sendNewChatMessage(JTextArea textField) {
+            String text = textField.getText();
+            openSession.addMessage(new ChatGPTMessage(ChatGPTRole.user, text));
+            this.messageWindowUI.addNewMessage(new ChatGPTMessage(ChatGPTRole.user, text));
 
-            return true;
+            JTextArea streamTextArea = new JTextArea();
+            this.messageWindowUI.streamNewMessage(streamTextArea, null);
+            final String[] savedText = {""};
+
+            Thread proxyThread = new Thread(() -> {
+                ProxyService proxyService = new ProxyService(HttpClient.newHttpClient());
+
+                ChatGPTRequest req = new ChatGPTRequest(openSession.getMessages(), text);
+                proxyService.getChatGPTResponse(req, new AsyncCallback<>() {
+                    @Override
+                    public void onResult(String result) {
+                        streamTextArea.append(result + "\n");
+                        savedText[0] += result + "\n";
+                    }
+
+                    @Override
+                    public void onError(Exception e) {
+                        // TODO Handle errors
+                        log.error("Error making chat gpt request", e);
+                    }
+
+                    @Override
+                    public void onComplete() {
+                        // Hack to remove trailing newline
+                        String trimmedText = savedText[0].replaceAll("\\n+$", "");
+                        streamTextArea.setText(trimmedText);
+                        openSession.addMessage(new ChatGPTMessage(ChatGPTRole.system, trimmedText));
+                        try {
+                            ChatPersistence.saveSessions(List.of(openSession));
+                            textField.setText("");
+                            textField.requestFocusInWindow();
+                        } catch (Exception e) {
+                            log.error("Error saving session", e);
+                        }
+                    }
+                });
+            });
+
+            proxyThread.start();
+        }
+
+        private boolean canWeSendMessage(ChatGPTMessage message, JTextArea textField) {
+            return !(message.getContent() == null || message.getContent().isEmpty() || message.getContent().equals("Message CodeEcho..."));
         }
 
         public JPanel getContentPanel() {

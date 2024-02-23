@@ -1,7 +1,7 @@
 package jwtly10.codeecho.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import jwtly10.codeecho.callback.AsyncCallback;
 import jwtly10.codeecho.model.ChatGPTRequest;
 import jwtly10.codeecho.model.TranscriptResponse;
@@ -59,17 +59,19 @@ public class ProxyService {
      *                 2. onError: do X when an error occurs, with the error message
      *                 3. onComplete: do X when the request has finished streaming
      */
-    public void getChatGPTResponse(ChatGPTRequest req, AsyncCallback<String> callback) throws JsonProcessingException {
-        ObjectMapper objectMapper = new ObjectMapper();
-        URI url = URI.create("http://localhost:8080/api/v1/chatgpt/stream");
-
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(url)
-                .header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(req)))
-                .build();
-
+    public void getChatGPTResponse(ChatGPTRequest req, AsyncCallback<String> callback) {
         try {
+            ObjectMapper objectMapper = new ObjectMapper();
+            objectMapper.registerModule(new JavaTimeModule());
+
+            URI url = URI.create("http://localhost:8080/api/v1/chatgpt/stream");
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(url)
+                    .header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(req)))
+                    .build();
+
             client.sendAsync(request, HttpResponse.BodyHandlers.ofInputStream())
                     .thenAccept(response -> {
                         try (var reader = new BufferedReader(new InputStreamReader(response.body()))) {

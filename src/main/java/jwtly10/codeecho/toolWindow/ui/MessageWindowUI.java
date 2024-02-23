@@ -1,6 +1,7 @@
 package jwtly10.codeecho.toolWindow.ui;
 
 import com.intellij.ui.components.JBScrollPane;
+import jwtly10.codeecho.callback.AsyncCallback;
 import jwtly10.codeecho.model.ChatGPTMessage;
 import jwtly10.codeecho.model.ChatGPTRole;
 
@@ -71,6 +72,32 @@ public class MessageWindowUI extends JPanel {
         }
 
         MessageComponent messageComponent = new MessageComponent(message);
+        messagesPanel.add(messageComponent, gbc);
+
+        gbc.weighty = 1;
+        filler = Box.createVerticalGlue();
+        messagesPanel.add(filler, gbc);
+
+        messagesPanel.revalidate();
+        messagesPanel.repaint();
+
+        scrollToBottom();
+    }
+
+    public void streamNewMessage(JTextArea streamTextArea, AsyncCallback<ChatGPTMessage> callback) {
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.gridwidth = GridBagConstraints.REMAINDER;
+        gbc.weightx = 1;
+        gbc.weighty = 0;
+
+        gbc.anchor = GridBagConstraints.LINE_START;
+
+
+        if (filler != null) {
+            messagesPanel.remove(filler);
+        }
+
+        MessageComponent messageComponent = new MessageComponent(streamTextArea, callback);
         messagesPanel.add(messageComponent, gbc);
 
         gbc.weighty = 1;
