@@ -219,7 +219,7 @@ public class CodeEchoToolWindowFactory implements ToolWindowFactory, DumbAware {
             SwingUtilities.invokeLater(() -> {
                 textField.setText("");
                 textField.requestFocusInWindow();
-                messageWindowUI.set(openSession.getMessages());
+                messageWindowUI.addNewMessage(message);
             });
             // Temp comment, dont save session so we dont have bad data
 //            try {

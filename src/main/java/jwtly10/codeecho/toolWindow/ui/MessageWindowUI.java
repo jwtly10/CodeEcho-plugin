@@ -9,6 +9,8 @@ import java.awt.*;
 import java.util.List;
 
 public class MessageWindowUI extends JPanel {
+    private final JPanel messagesPanel = new JPanel();
+    private Component filler = Box.createVerticalGlue();
 
     public MessageWindowUI() {
     }
@@ -18,7 +20,6 @@ public class MessageWindowUI extends JPanel {
         removeAll();
         setOpaque(false);
 
-        JPanel messagesPanel = new JPanel();
         messagesPanel.setLayout(new GridBagLayout());
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.gridwidth = GridBagConstraints.REMAINDER;
@@ -37,7 +38,6 @@ public class MessageWindowUI extends JPanel {
         }
 
         gbc.weighty = 1;
-        Component filler = Box.createVerticalGlue();
         messagesPanel.add(filler, gbc);
 
         JBScrollPane scrollPane = new JBScrollPane(messagesPanel);
@@ -50,10 +50,46 @@ public class MessageWindowUI extends JPanel {
         revalidate();
         repaint();
 
-        // Schedule the scroll to bottom action after all UI updates are done
-        SwingUtilities.invokeLater(() -> {
-            JScrollBar verticalScrollBar = scrollPane.getVerticalScrollBar();
-            verticalScrollBar.setValue(verticalScrollBar.getMaximum());
-        });
+        scrollToBottom();
     }
+
+    public void addNewMessage(ChatGPTMessage message) {
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.gridwidth = GridBagConstraints.REMAINDER;
+        gbc.weightx = 1;
+        gbc.weighty = 0;
+
+        if (message.getRole().equals(ChatGPTRole.user)) {
+            gbc.anchor = GridBagConstraints.LINE_END;
+        } else {
+            gbc.anchor = GridBagConstraints.LINE_START;
+        }
+
+
+        if (filler != null) {
+            messagesPanel.remove(filler);
+        }
+
+        MessageComponent messageComponent = new MessageComponent(message);
+        messagesPanel.add(messageComponent, gbc);
+
+        gbc.weighty = 1;
+        filler = Box.createVerticalGlue();
+        messagesPanel.add(filler, gbc);
+
+        messagesPanel.revalidate();
+        messagesPanel.repaint();
+
+        scrollToBottom();
+    }
+
+    private void scrollToBottom() {
+        if (messagesPanel.getParent() instanceof JViewport viewport) {
+            SwingUtilities.invokeLater(() -> {
+                viewport.scrollRectToVisible(new Rectangle(0, messagesPanel.getHeight() - 1, 1, 1));
+            });
+        }
+    }
+
+
 }
