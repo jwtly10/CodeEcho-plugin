@@ -7,17 +7,17 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-public class ChatSession {
+public class ChatGPTSession {
     private final String id;
-    private final List<Message> messages = new ArrayList<>();
+    private final List<ChatGPTMessage> messages = new ArrayList<>();
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime lastUpdated;
 
-    public ChatSession() {
+    public ChatGPTSession() {
         this.id = UUID.randomUUID().toString();
     }
 
-    public List<Message> getMessages() {
+    public List<ChatGPTMessage> getMessages() {
         return messages;
     }
 
@@ -25,8 +25,9 @@ public class ChatSession {
         return id;
     }
 
-    public void addMessage(Message message) {
+    public void addMessage(ChatGPTMessage message) {
         messages.add(message);
+        setLastUpdatedNow();
     }
 
     public LocalDateTime getLastUpdated() {
@@ -37,7 +38,7 @@ public class ChatSession {
         this.lastUpdated = lastUpdated;
     }
 
-    public void setLastUpdatedNow() {
+    private void setLastUpdatedNow() {
         this.lastUpdated = LocalDateTime.now();
     }
 }

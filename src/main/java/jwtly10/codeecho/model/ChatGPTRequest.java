@@ -4,19 +4,19 @@ import java.util.List;
 
 public class ChatGPTRequest {
 
-    public List<ChatGPTContext> messages;
+    public List<ChatGPTMessage> messages;
     public String msg;
 
-    public ChatGPTRequest(List<ChatGPTContext> messages, String msg) {
+    public ChatGPTRequest(List<ChatGPTMessage> messages, String msg) {
         this.messages = messages;
         this.msg = msg;
     }
 
-    public List<ChatGPTContext> getMessages() {
+    public List<ChatGPTMessage> getMessages() {
         return messages;
     }
 
-    public void setMessages(List<ChatGPTContext> messages) {
+    public void setMessages(List<ChatGPTMessage> messages) {
         this.messages = messages;
     }
 

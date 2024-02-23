@@ -1,7 +1,7 @@
 package jwtly10.codeecho.service;
 
 import jwtly10.codeecho.callback.AsyncCallback;
-import jwtly10.codeecho.model.ChatGPTContext;
+import jwtly10.codeecho.model.ChatGPTMessage;
 import jwtly10.codeecho.model.ChatGPTRequest;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -17,9 +17,9 @@ import static jwtly10.codeecho.model.ChatGPTRole.user;
 public class ProxyServiceTest {
     @Test
     public void testGoodGetChatGPTResponse() {
-        List<ChatGPTContext> messages = List.of(
-                new ChatGPTContext(user, "Hello, my name is Josh"),
-                new ChatGPTContext(system, "Hey Josh, I'm ChatGPT. How can I help you today?")
+        List<ChatGPTMessage> messages = List.of(
+                new ChatGPTMessage(user, "Hello, my name is Josh"),
+                new ChatGPTMessage(system, "Hey Josh, I'm ChatGPT. How can I help you today?")
         );
 
         ChatGPTRequest req = new ChatGPTRequest(messages, "Do you remember my name?");
@@ -31,7 +31,7 @@ public class ProxyServiceTest {
         final String[] responseData = new String[1];
 
         try {
-            proxyService.getChatGPTResponse(req, new AsyncCallback<String>() {
+            proxyService.getChatGPTResponse(req, new AsyncCallback<>() {
                 @Override
                 public void onResult(String data) {
                     responseData[0] = data;
