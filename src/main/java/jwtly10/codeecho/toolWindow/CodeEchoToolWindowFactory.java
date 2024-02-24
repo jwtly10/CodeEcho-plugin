@@ -208,6 +208,8 @@ public class CodeEchoToolWindowFactory implements ToolWindowFactory, DumbAware {
 
         private void sendNewChatMessage(JTextArea textField) {
             String text = textField.getText();
+            // Hack to remove trailing newline
+            String trimmedText = text.replaceAll("\\n+$", "");
             openSession.addMessage(new ChatGPTMessage(ChatGPTRole.user, text));
             this.messageWindowUI.addNewMessage(new ChatGPTMessage(ChatGPTRole.user, text));
 
