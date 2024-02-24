@@ -20,13 +20,19 @@ public class MessageWindowUI extends JPanel {
         removeAll();
         setOpaque(false);
 
-        messagesPanel.setLayout(new BoxLayout(messagesPanel, BoxLayout.Y_AXIS));
+        messagesPanel.setLayout(new GridBagLayout());
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.gridwidth = GridBagConstraints.REMAINDER;
+        gbc.weightx = 1;
+        gbc.weighty = 0;
+
         for (ChatGPTMessage message : messages) {
             MessageComponent messageComponent = new MessageComponent(message);
-            messagesPanel.add(messageComponent);
+            messagesPanel.add(messageComponent, gbc);
         }
 
-        messagesPanel.add(filler);
+        gbc.weighty = 1;
+        messagesPanel.add(filler, gbc);
 
         JBScrollPane scrollPane = new JBScrollPane(messagesPanel);
         scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
@@ -51,15 +57,21 @@ public class MessageWindowUI extends JPanel {
     }
 
     public void addNewMessage(ChatGPTMessage message) {
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.gridwidth = GridBagConstraints.REMAINDER;
+        gbc.weightx = 1;
+        gbc.weighty = 0;
+
         if (filler != null) {
             messagesPanel.remove(filler);
         }
 
         MessageComponent messageComponent = new MessageComponent(message);
-        messagesPanel.add(messageComponent);
+        messagesPanel.add(messageComponent, gbc);
 
         filler = Box.createVerticalGlue();
-        messagesPanel.add(filler);
+        gbc.weighty = 1;
+        messagesPanel.add(filler, gbc);
 
         messagesPanel.revalidate();
         messagesPanel.repaint();
@@ -68,15 +80,21 @@ public class MessageWindowUI extends JPanel {
     }
 
     public void streamNewMessage(JTextPane streamTextPane, AsyncCallback<ChatGPTMessage> callback) {
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.gridwidth = GridBagConstraints.REMAINDER;
+        gbc.weightx = 1;
+        gbc.weighty = 0;
+
         if (filler != null) {
             messagesPanel.remove(filler);
         }
 
         MessageComponent messageComponent = new MessageComponent(streamTextPane, callback);
-        messagesPanel.add(messageComponent);
+        messagesPanel.add(messageComponent, gbc);
 
+        gbc.weighty = 1;
         filler = Box.createVerticalGlue();
-        messagesPanel.add(filler);
+        messagesPanel.add(filler, gbc);
 
         messagesPanel.revalidate();
         messagesPanel.repaint();
