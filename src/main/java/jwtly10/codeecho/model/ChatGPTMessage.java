@@ -7,6 +7,13 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.time.LocalDateTime;
 
 public class ChatGPTMessage {
+    // TODO: Limit context messages
+    /*
+     * TODO: Implement a clean up method to remove old messages
+     *  Or some logic to limit the number of messages in the chat window for perf
+     *  could split data up into multiple files, and only load whats needed
+     */
+
     private ChatGPTRole role;
     private String content;
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")

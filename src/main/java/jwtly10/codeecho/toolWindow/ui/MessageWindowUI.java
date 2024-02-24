@@ -110,7 +110,7 @@ public class MessageWindowUI extends JPanel {
         scrollToBottom();
     }
 
-    private void scrollToBottom() {
+    public void scrollToBottom() {
         if (messagesPanel.getParent() instanceof JViewport viewport) {
             SwingUtilities.invokeLater(() -> {
                 viewport.scrollRectToVisible(new Rectangle(0, messagesPanel.getHeight() - 1, 1, 1));

@@ -224,11 +224,12 @@ public class CodeEchoToolWindowFactory implements ToolWindowFactory, DumbAware {
                     public void onResult(String result) {
                         streamTextArea.append(result + "\n");
                         savedText[0] += result + "\n";
+                        messageWindowUI.scrollToBottom();
                     }
 
                     @Override
                     public void onError(Exception e) {
-                        // TODO Handle errors
+                        // TODO Handle errors better
                         log.error("Error making chat gpt request", e);
                     }
 
