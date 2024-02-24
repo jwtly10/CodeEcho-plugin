@@ -28,6 +28,7 @@ import javax.swing.border.CompoundBorder;
 import java.awt.*;
 import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
+import java.io.FileNotFoundException;
 import java.net.http.HttpClient;
 import java.util.ArrayList;
 import java.util.List;
@@ -40,7 +41,6 @@ public class CodeEchoToolWindowFactory implements ToolWindowFactory, DumbAware {
 
     private static final Logger log = Logger.getInstance(CodeEchoToolWindowFactory.class);
 
-
     @Override
     public void createToolWindowContent(@NotNull Project project, @NotNull ToolWindow toolWindow) {
         CodeEchoToolWindowContent toolWindowContent = new CodeEchoToolWindowContent();
@@ -52,32 +52,31 @@ public class CodeEchoToolWindowFactory implements ToolWindowFactory, DumbAware {
         private final JPanel contentPanel = new JPanel();
         private static ChatGPTSession openSession;
         private final MessageWindowUI messageWindowUI;
+        private final JLabel noChatsLabel = new JLabel("Get started by asking CodeEcho a question!");
 
         public CodeEchoToolWindowContent() {
-            // Generate a test session
-//            ChatGPTSession testSession = new ChatGPTSession();
-//            testSession.addMessage(new ChatGPTMessage(ChatGPTRole.user, "Hello"));
-//            testSession.addMessage(new ChatGPTMessage(ChatGPTRole.system, "Hi there!"));
-//            testSession.addMessage(new ChatGPTMessage(ChatGPTRole.user, "How are you?"));
-//            testSession.addMessage(new ChatGPTMessage(ChatGPTRole.system, "I'm good, thanks!"));
-//            try {
-//                ChatPersistence.saveSessions(List.of(testSession));
-//            } catch (Exception e) {
-//                e.printStackTrace();
-//            }
-
             List<ChatGPTSession> sessions = new ArrayList<>();
             try {
                 sessions = ChatPersistence.loadSessions();
+            } catch (FileNotFoundException e) {
+                log.info("No sessions found, creating new session");
             } catch (Exception e) {
-                // TODO: Handle what happens when the sessions cannot be loaded
                 log.error("Error loading sessions", e);
             }
-
             this.messageWindowUI = new MessageWindowUI();
-            if (sessions == null) {
-                // TODO: Handle what happens when the sessions are  empty
-                log.info("No sessions found");
+            if (sessions.isEmpty()) {
+
+                openSession = new ChatGPTSession();
+                sessions.add(openSession);
+
+                contentPanel.setLayout(new BorderLayout());
+                contentPanel.add(noChatsLabel, BorderLayout.NORTH);
+                contentPanel.add(messageWindowUI, BorderLayout.CENTER);
+                this.messageWindowUI.set(openSession.getMessages());
+                contentPanel.setBorder(JBUI.Borders.empty(30));
+                this.messageWindowUI.setBorder(JBUI.Borders.emptyBottom(30));
+                contentPanel.add(createInputPanel(), BorderLayout.SOUTH);
+
                 return;
             }
             openSession = sessions.get(0);
@@ -209,6 +208,8 @@ public class CodeEchoToolWindowFactory implements ToolWindowFactory, DumbAware {
         }
 
         private void sendNewChatMessage(JTextArea textField) {
+            noChatsLabel.setVisible(false);
+
             String text = textField.getText();
             // Hack to remove trailing newline
             String trimmedText = text.replaceAll("\\n+$", "");

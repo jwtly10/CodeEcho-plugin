@@ -40,7 +40,7 @@ public class ChatPersistence {
             return mapper.readValue(file, new TypeReference<>() {
             });
         } catch (IOException e) {
-            log.error("Failed to load sessions", e);
+            log.info("Can't find sessions file");
             throw e;
         }
     }
