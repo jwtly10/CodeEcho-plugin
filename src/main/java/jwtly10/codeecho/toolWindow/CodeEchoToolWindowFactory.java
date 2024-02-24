@@ -15,8 +15,10 @@ import jwtly10.codeecho.model.ChatGPTRole;
 import jwtly10.codeecho.model.ChatGPTSession;
 import jwtly10.codeecho.persistance.ChatPersistence;
 import jwtly10.codeecho.service.AudioService;
+import jwtly10.codeecho.service.ParserService;
 import jwtly10.codeecho.service.ProxyService;
 import jwtly10.codeecho.toolWindow.component.CustomProgressBar;
+import jwtly10.codeecho.toolWindow.ui.MessageComponent;
 import jwtly10.codeecho.toolWindow.ui.MessageWindowUI;
 import org.jetbrains.annotations.NotNull;
 
@@ -210,22 +212,28 @@ public class CodeEchoToolWindowFactory implements ToolWindowFactory, DumbAware {
             String text = textField.getText();
             // Hack to remove trailing newline
             String trimmedText = text.replaceAll("\\n+$", "");
-            openSession.addMessage(new ChatGPTMessage(ChatGPTRole.user, text));
-            this.messageWindowUI.addNewMessage(new ChatGPTMessage(ChatGPTRole.user, text));
+            openSession.addMessage(new ChatGPTMessage(ChatGPTRole.user, trimmedText));
+            this.messageWindowUI.addNewMessage(new ChatGPTMessage(ChatGPTRole.user, trimmedText));
 
-            JTextArea streamTextArea = new JTextArea();
-            this.messageWindowUI.streamNewMessage(streamTextArea, null);
-            final String[] savedText = {""};
+            JTextPane streamTextPane = new JTextPane();
+            this.messageWindowUI.streamNewMessage(streamTextPane, null);
 
             Thread proxyThread = new Thread(() -> {
                 ProxyService proxyService = new ProxyService(HttpClient.newHttpClient());
+                final String[] updatedContent = {""};
 
                 ChatGPTRequest req = new ChatGPTRequest(openSession.getMessages(), text);
                 proxyService.getChatGPTResponse(req, new AsyncCallback<>() {
                     @Override
                     public void onResult(String result) {
-                        streamTextArea.append(result + "\n");
-                        savedText[0] += result + "\n";
+                        SwingUtilities.invokeLater(() -> {
+                            updatedContent[0] = updatedContent[0].concat(result + "\n");
+                            String htmlContent = ParserService.markdownToHtml(updatedContent[0]);
+                            System.out.println("DEBUG: Html content stream: " + htmlContent);
+                            streamTextPane.setContentType("text/html");
+                            streamTextPane.setText(htmlContent);
+                            streamTextPane.setPreferredSize(new Dimension(600, MessageComponent.getContentHeight(600, htmlContent)));
+                        });
                         messageWindowUI.scrollToBottom();
                     }
 
@@ -238,8 +246,11 @@ public class CodeEchoToolWindowFactory implements ToolWindowFactory, DumbAware {
                     @Override
                     public void onComplete() {
                         // Hack to remove trailing newline
-                        String trimmedText = savedText[0].replaceAll("\\n+$", "");
-                        streamTextArea.setText(trimmedText);
+                        String trimmedText = updatedContent[0].replaceAll("\\n+$", "");
+                        String finalHtmlContent = ParserService.markdownToHtml(trimmedText);
+                        streamTextPane.setContentType("text/html");
+                        streamTextPane.setText(finalHtmlContent);
+                        streamTextPane.setPreferredSize(new Dimension(600, MessageComponent.getContentHeight(600, finalHtmlContent)));
                         openSession.addMessage(new ChatGPTMessage(ChatGPTRole.system, trimmedText));
                         try {
                             ChatPersistence.saveSessions(List.of(openSession));

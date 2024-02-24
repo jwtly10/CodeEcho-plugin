@@ -84,7 +84,7 @@ public class MessageWindowUI extends JPanel {
         scrollToBottom();
     }
 
-    public void streamNewMessage(JTextArea streamTextArea, AsyncCallback<ChatGPTMessage> callback) {
+    public void streamNewMessage(JTextPane streamTextPane, AsyncCallback<ChatGPTMessage> callback) {
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.gridwidth = GridBagConstraints.REMAINDER;
         gbc.weightx = 1;
@@ -97,7 +97,7 @@ public class MessageWindowUI extends JPanel {
             messagesPanel.remove(filler);
         }
 
-        MessageComponent messageComponent = new MessageComponent(streamTextArea, callback);
+        MessageComponent messageComponent = new MessageComponent(streamTextPane, callback);
         messagesPanel.add(messageComponent, gbc);
 
         gbc.weighty = 1;

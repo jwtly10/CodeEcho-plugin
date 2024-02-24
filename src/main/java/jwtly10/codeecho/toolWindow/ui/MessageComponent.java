@@ -18,11 +18,11 @@ public class MessageComponent extends JPanel {
         init(message);
     }
 
-    public MessageComponent(JTextArea streamTextArea, AsyncCallback<ChatGPTMessage> callback) {
-        stream(streamTextArea, callback);
+    public MessageComponent(JTextPane streamTextPane, AsyncCallback<ChatGPTMessage> callback) {
+        stream(streamTextPane, callback);
     }
 
-    private void stream(JTextArea streamTextArea, AsyncCallback<ChatGPTMessage> callback) {
+    private void stream(JTextPane streamTextPane, AsyncCallback<ChatGPTMessage> callback) {
         JPanel mainPanel = new JPanel();
         mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.Y_AXIS));
         LocalDateTime now = LocalDateTime.now();
@@ -36,17 +36,15 @@ public class MessageComponent extends JPanel {
 
         JPanel msgPanel = new JPanel();
         msgPanel.setLayout(new BoxLayout(msgPanel, BoxLayout.Y_AXIS));
-        msgPanel.setBorder(BorderFactory.createLineBorder(JBColor.BLACK, 1));
-
-        streamTextArea.setWrapStyleWord(true);
-        streamTextArea.setLineWrap(true);
-        streamTextArea.setEditable(false);
-        streamTextArea.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-        streamTextArea.setColumns(60);
+        Border border1 = BorderFactory.createEmptyBorder(10, 10, 10, 10);
+        Border border2 = BorderFactory.createLineBorder(JBColor.BLACK, 1);
+        msgPanel.setBorder(BorderFactory.createCompoundBorder(border2, border1));
+        streamTextPane.setEditable(false);
+        streamTextPane.setContentType("text/html");
         metaPanel.setLayout(new FlowLayout(FlowLayout.LEFT));
         metaPanel.add(userLabel);
         metaPanel.add(timeLabel);
-        msgPanel.add(streamTextArea);
+        msgPanel.add(streamTextPane);
 
         mainPanel.add(metaPanel);
         mainPanel.add(msgPanel);
@@ -106,7 +104,7 @@ public class MessageComponent extends JPanel {
         repaint();
     }
 
-    public int getContentHeight(int width, String htmlContent) {
+    public static int getContentHeight(int width, String htmlContent) {
         JEditorPane dummyEditorPane = new JEditorPane();
         dummyEditorPane.setSize(width, Short.MAX_VALUE);
         dummyEditorPane.setContentType("text/html");
