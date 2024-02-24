@@ -54,6 +54,15 @@ public class MessageWindowUI extends JPanel {
         scrollToBottom();
     }
 
+    public void removeOldestMessage() {
+        Component[] components = messagesPanel.getComponents();
+        if (components.length > 0) {
+            messagesPanel.remove(components[0]);
+            messagesPanel.revalidate();
+            messagesPanel.repaint();
+        }
+    }
+
     public void addNewMessage(ChatGPTMessage message) {
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.gridwidth = GridBagConstraints.REMAINDER;

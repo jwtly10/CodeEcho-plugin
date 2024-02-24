@@ -212,6 +212,14 @@ public class CodeEchoToolWindowFactory implements ToolWindowFactory, DumbAware {
             String text = textField.getText();
             // Hack to remove trailing newline
             String trimmedText = text.replaceAll("\\n+$", "");
+
+            // Shortterm fix to remove old messages
+            if (openSession.getMessages().size() >= 10) {
+                log.debug("Deleting oldest message");
+                openSession.getMessages().remove(0);
+                messageWindowUI.removeOldestMessage();
+            }
+
             openSession.addMessage(new ChatGPTMessage(ChatGPTRole.user, trimmedText));
             this.messageWindowUI.addNewMessage(new ChatGPTMessage(ChatGPTRole.user, trimmedText));
 
@@ -233,36 +241,47 @@ public class CodeEchoToolWindowFactory implements ToolWindowFactory, DumbAware {
                             streamTextPane.setContentType("text/html");
                             streamTextPane.setText(htmlContent);
                             streamTextPane.setPreferredSize(new Dimension(600, MessageComponent.getContentHeight(600, htmlContent)));
+                            messageWindowUI.scrollToBottom();
                         });
-                        messageWindowUI.scrollToBottom();
                     }
 
                     @Override
                     public void onError(Exception e) {
-                        // TODO Handle errors better
-                        log.error("Error making chat gpt request", e);
+                        SwingUtilities.invokeLater(() -> {
+                            // TODO Handle errors better
+                            log.error("Error making chat gpt request", e);
+                        });
                     }
 
                     @Override
                     public void onComplete() {
                         // Hack to remove trailing newline
-                        String trimmedText = updatedContent[0].replaceAll("\\n+$", "");
-                        String finalHtmlContent = ParserService.markdownToHtml(trimmedText);
-                        streamTextPane.setContentType("text/html");
-                        streamTextPane.setText(finalHtmlContent);
-                        streamTextPane.setPreferredSize(new Dimension(600, MessageComponent.getContentHeight(600, finalHtmlContent)));
-                        openSession.addMessage(new ChatGPTMessage(ChatGPTRole.system, trimmedText));
-                        try {
-                            ChatPersistence.saveSessions(List.of(openSession));
-                            textField.setText("");
-                            textField.requestFocusInWindow();
-                        } catch (Exception e) {
-                            log.error("Error saving session", e);
-                        }
+                        SwingUtilities.invokeLater(() -> {
+                            String trimmedText = updatedContent[0].replaceAll("\\n+$", "");
+                            String finalHtmlContent = ParserService.markdownToHtml(trimmedText);
+                            streamTextPane.setContentType("text/html");
+                            streamTextPane.setText(finalHtmlContent);
+                            streamTextPane.setPreferredSize(new Dimension(600, MessageComponent.getContentHeight(600, finalHtmlContent)));
+
+                            // Shortterm fix to remove old messages
+                            if (openSession.getMessages().size() >= 10) {
+                                System.out.println("Deleting oldest message");
+                                openSession.getMessages().remove(0);
+                                messageWindowUI.removeOldestMessage();
+                            }
+
+                            openSession.addMessage(new ChatGPTMessage(ChatGPTRole.system, trimmedText));
+                            try {
+                                ChatPersistence.saveSessions(List.of(openSession));
+                                textField.setText("");
+                                textField.requestFocusInWindow();
+                            } catch (Exception e) {
+                                log.error("Error saving session", e);
+                            }
+                        });
                     }
                 });
             });
-
             proxyThread.start();
         }
 
