@@ -3,7 +3,6 @@ package jwtly10.codeecho.toolWindow.ui;
 import com.intellij.ui.components.JBScrollPane;
 import jwtly10.codeecho.callback.AsyncCallback;
 import jwtly10.codeecho.model.ChatGPTMessage;
-import jwtly10.codeecho.model.ChatGPTRole;
 
 import javax.swing.*;
 import java.awt.*;
@@ -21,25 +20,13 @@ public class MessageWindowUI extends JPanel {
         removeAll();
         setOpaque(false);
 
-        messagesPanel.setLayout(new GridBagLayout());
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.gridwidth = GridBagConstraints.REMAINDER;
-        gbc.weightx = 1;
-        gbc.weighty = 0;
-
+        messagesPanel.setLayout(new BoxLayout(messagesPanel, BoxLayout.Y_AXIS));
         for (ChatGPTMessage message : messages) {
             MessageComponent messageComponent = new MessageComponent(message);
-
-            if (message.getRole().equals(ChatGPTRole.user)) {
-                gbc.anchor = GridBagConstraints.LINE_END;
-            } else {
-                gbc.anchor = GridBagConstraints.LINE_START;
-            }
-            messagesPanel.add(messageComponent, gbc);
+            messagesPanel.add(messageComponent);
         }
 
-        gbc.weighty = 1;
-        messagesPanel.add(filler, gbc);
+        messagesPanel.add(filler);
 
         JBScrollPane scrollPane = new JBScrollPane(messagesPanel);
         scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
@@ -64,28 +51,15 @@ public class MessageWindowUI extends JPanel {
     }
 
     public void addNewMessage(ChatGPTMessage message) {
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.gridwidth = GridBagConstraints.REMAINDER;
-        gbc.weightx = 1;
-        gbc.weighty = 0;
-
-        if (message.getRole().equals(ChatGPTRole.user)) {
-            gbc.anchor = GridBagConstraints.LINE_END;
-        } else {
-            gbc.anchor = GridBagConstraints.LINE_START;
-        }
-
-
         if (filler != null) {
             messagesPanel.remove(filler);
         }
 
         MessageComponent messageComponent = new MessageComponent(message);
-        messagesPanel.add(messageComponent, gbc);
+        messagesPanel.add(messageComponent);
 
-        gbc.weighty = 1;
         filler = Box.createVerticalGlue();
-        messagesPanel.add(filler, gbc);
+        messagesPanel.add(filler);
 
         messagesPanel.revalidate();
         messagesPanel.repaint();
@@ -94,24 +68,15 @@ public class MessageWindowUI extends JPanel {
     }
 
     public void streamNewMessage(JTextPane streamTextPane, AsyncCallback<ChatGPTMessage> callback) {
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.gridwidth = GridBagConstraints.REMAINDER;
-        gbc.weightx = 1;
-        gbc.weighty = 0;
-
-        gbc.anchor = GridBagConstraints.LINE_START;
-
-
         if (filler != null) {
             messagesPanel.remove(filler);
         }
 
         MessageComponent messageComponent = new MessageComponent(streamTextPane, callback);
-        messagesPanel.add(messageComponent, gbc);
+        messagesPanel.add(messageComponent);
 
-        gbc.weighty = 1;
         filler = Box.createVerticalGlue();
-        messagesPanel.add(filler, gbc);
+        messagesPanel.add(filler);
 
         messagesPanel.revalidate();
         messagesPanel.repaint();
