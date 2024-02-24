@@ -77,7 +77,7 @@ public class CodeEchoToolWindowFactory implements ToolWindowFactory, DumbAware {
             this.messageWindowUI = new MessageWindowUI();
             if (sessions == null) {
                 // TODO: Handle what happens when the sessions are  empty
-                System.out.println("No session");
+                log.info("No sessions found");
                 return;
             }
             openSession = sessions.get(0);
@@ -237,7 +237,7 @@ public class CodeEchoToolWindowFactory implements ToolWindowFactory, DumbAware {
                         SwingUtilities.invokeLater(() -> {
                             updatedContent[0] = updatedContent[0].concat(result + "\n");
                             String htmlContent = ParserService.markdownToHtml(updatedContent[0]);
-                            System.out.println("DEBUG: Html content stream: " + htmlContent);
+                            log.info("DEBUG: Html content stream: " + htmlContent);
                             streamTextPane.setContentType("text/html");
                             streamTextPane.setText(htmlContent);
                             streamTextPane.setPreferredSize(new Dimension(600, MessageComponent.getContentHeight(600, htmlContent)));
@@ -265,7 +265,7 @@ public class CodeEchoToolWindowFactory implements ToolWindowFactory, DumbAware {
 
                             // Shortterm fix to remove old messages
                             if (openSession.getMessages().size() >= 10) {
-                                System.out.println("Deleting oldest message");
+                                log.info("Deleting oldest message");
                                 openSession.getMessages().remove(0);
                                 messageWindowUI.removeOldestMessage();
                             }

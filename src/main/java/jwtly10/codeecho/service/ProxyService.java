@@ -74,6 +74,17 @@ public class ProxyService {
 
             client.sendAsync(request, HttpResponse.BodyHandlers.ofInputStream())
                     .thenAccept(response -> {
+
+                        if (response.statusCode() != 200) {
+                            SwingUtilities.invokeLater(() -> {
+                                if (callback != null) {
+                                    callback.onError(new Exception("Failed to get response from ChatGPT"));
+                                }
+                            });
+                            return;
+                        }
+
+
                         try (var reader = new BufferedReader(new InputStreamReader(response.body()))) {
                             String line;
                             while ((line = reader.readLine()) != null) {
