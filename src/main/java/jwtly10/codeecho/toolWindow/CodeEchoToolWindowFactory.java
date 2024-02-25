@@ -17,9 +17,10 @@ import jwtly10.codeecho.persistance.ChatPersistence;
 import jwtly10.codeecho.service.AudioService;
 import jwtly10.codeecho.service.ParserService;
 import jwtly10.codeecho.service.ProxyService;
-import jwtly10.codeecho.toolWindow.component.ProgressBarJPanel;
+import jwtly10.codeecho.toolWindow.component.CustomButton;
 import jwtly10.codeecho.toolWindow.component.StreamMessageJPanel;
 import jwtly10.codeecho.toolWindow.ui.MessageWindowJPanel;
+import jwtly10.codeecho.toolWindow.utils.CColor;
 import org.jetbrains.annotations.NotNull;
 
 import javax.swing.*;
@@ -35,7 +36,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static jwtly10.codeecho.toolWindow.ui.CodeEchoUILogic.createPlayButton;
 import static jwtly10.codeecho.toolWindow.ui.CodeEchoUILogic.createRecordButton;
 
 public class CodeEchoToolWindowFactory implements ToolWindowFactory, DumbAware {
@@ -151,8 +151,14 @@ public class CodeEchoToolWindowFactory implements ToolWindowFactory, DumbAware {
 
         public JPanel createInputPanel() {
             JPanel inputPanel = new JPanel();
-
             inputPanel.setLayout(new BoxLayout(inputPanel, BoxLayout.Y_AXIS));
+
+            JPanel metaInfoPanel = new JPanel();
+            metaInfoPanel.setLayout(new FlowLayout(FlowLayout.LEFT));
+            JLabel errorMsgLabel = new JLabel();
+            errorMsgLabel.setForeground(JBColor.RED);
+            metaInfoPanel.add(errorMsgLabel);
+            inputPanel.add(metaInfoPanel);
 
             JPanel tmpPanel = new JPanel();
             tmpPanel.setLayout(new BorderLayout());
@@ -161,12 +167,12 @@ public class CodeEchoToolWindowFactory implements ToolWindowFactory, DumbAware {
             innerPanel.setLayout(new GridBagLayout());
             GridBagConstraints gbc = new GridBagConstraints();
 
-            ImageIcon sendIcon = new ImageIcon(Objects.requireNonNull(getClass().getResource("/images/icons/icon-send.png")));
+            ImageIcon sendIcon = new ImageIcon(Objects.requireNonNull(getClass().getResource("/images/icons/icon-send-white.png")));
             Image sendIconImage = sendIcon.getImage();
             Image scaledInstance = sendIconImage.getScaledInstance(30, 30, java.awt.Image.SCALE_SMOOTH);
             sendIcon = new ImageIcon(scaledInstance);
 
-            JButton sendButton = new JButton(sendIcon);
+            CustomButton sendButton = new CustomButton(sendIcon, CColor.GREEN);
             sendButton.setPreferredSize(new Dimension(50, 50));
 
             JTextArea mainInputField = new JTextArea();
@@ -208,18 +214,12 @@ public class CodeEchoToolWindowFactory implements ToolWindowFactory, DumbAware {
                 handleNewReq(mainInputField);
             });
 
-            /* TODO: Remove this message label code spaghetti */
-            JLabel messageLabel = new JLabel("Error messages go here");
-
             AudioService audioService = new AudioService();
-            ProgressBarJPanel progressBar = new ProgressBarJPanel(5000);
 
             final boolean[] isRecording = {false};
             final byte[][] audioData = new byte[1][];
 
-            JButton playButton = createPlayButton(audioData, progressBar, messageLabel);
-            JButton recordButton = createRecordButton(isRecording, audioData, progressBar, playButton, audioService, messageLabel, mainInputField);
-            progressBar.setVisible(false);
+            JButton recordButton = createRecordButton(isRecording, audioData, audioService, errorMsgLabel, mainInputField);
 
             gbc.fill = GridBagConstraints.HORIZONTAL;
             gbc.weightx = 1.0;
@@ -255,7 +255,6 @@ public class CodeEchoToolWindowFactory implements ToolWindowFactory, DumbAware {
 
             tmpPanel.add(innerPanel, BorderLayout.NORTH);
             inputPanel.add(tmpPanel);
-            inputPanel.add(progressBar);
 
             return inputPanel;
         }

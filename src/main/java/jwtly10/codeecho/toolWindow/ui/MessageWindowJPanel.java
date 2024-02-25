@@ -30,7 +30,7 @@ public class MessageWindowJPanel extends JPanel {
 
         for (ChatGPTMessage message : messages) {
             if (message.getContent().trim().isEmpty()) {
-                ChatErrorJPanel errorComponent = new ChatErrorJPanel("There was an error with this response, please try again.");
+                ChatErrorJPanel errorComponent = new ChatErrorJPanel("There was an error generating this response, please try again.");
                 messagesPanel.add(errorComponent, gbc);
             } else {
                 MessageJPanel messageComponent = new MessageJPanel(message);

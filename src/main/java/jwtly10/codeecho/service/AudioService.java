@@ -10,6 +10,7 @@ import javax.sound.sampled.*;
 import javax.swing.*;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.net.ConnectException;
 import java.net.http.HttpClient;
 
 public class AudioService {
@@ -29,6 +30,8 @@ public class AudioService {
      */
     public void record(int duration, AsyncCallback<RecordModel> callback) {
         Thread recordingThread = new Thread(() -> {
+            ByteArrayOutputStream out = null;
+
             try {
                 log.info("Recording started");
                 AudioFormat format = getAudioFormat();
@@ -38,9 +41,10 @@ public class AudioService {
                 targetLine.open(format);
                 targetLine.start();
 
-                ByteArrayOutputStream out = new ByteArrayOutputStream();
                 byte[] data = new byte[4096];
                 long startTime = System.currentTimeMillis();
+
+                out = new ByteArrayOutputStream();
 
                 while (System.currentTimeMillis() - startTime < duration) {
                     if (STOP_RECORDING) {
@@ -58,22 +62,49 @@ public class AudioService {
                 targetLine.stop();
                 targetLine.close();
 
-                ProxyService proxyService = new ProxyService(HttpClient.newHttpClient());
-
-                try {
-                    TranscriptResponse result = proxyService.transcribeAudio(out.toByteArray());
-                    RecordModel res = new RecordModel(result, out.toByteArray());
-
-                    if (callback != null) {
-                        SwingUtilities.invokeLater(() -> callback.onResult(res));
-                    }
-                } catch (Exception e) {
-                    throw new RuntimeException("Transcription failed", e);
-                }
             } catch (Exception ex) {
                 log.error("Recording failed", ex);
-                // TODO Handle different error cases and feedback to the user
-                SwingUtilities.invokeLater(() -> callback.onError(new AudioException("Recording failed")));
+                SwingUtilities.invokeLater(() -> callback.onError(new AudioException("Recording failed, see logs for more details.")));
+            }
+
+            ProxyService proxyService = new ProxyService(HttpClient.newHttpClient());
+
+            try {
+                if (out == null) {
+                    throw new AudioException("Recording failed. No audio data found.");
+                }
+
+                TranscriptResponse result = proxyService.transcribeAudio(out.toByteArray());
+                RecordModel res = new RecordModel(result, out.toByteArray());
+
+                if (res.getTrans().getTranscript().isEmpty()) {
+                    throw new AudioException("We couldn't hear anything. Please try again.");
+                }
+
+                if (callback != null) {
+                    SwingUtilities.invokeLater(() -> callback.onResult(res));
+                }
+
+            } catch (AudioException e) {
+                log.error("Something went wrong with recording the audio, out is null", e);
+                SwingUtilities.invokeLater(() -> callback.onError(e));
+            } catch (Exception e) {
+                Throwable cause = e.getCause();
+                if (cause instanceof ConnectException) {
+                    SwingUtilities.invokeLater(() -> {
+                        if (callback != null) {
+                            log.error("Connection failed to server: ", e);
+                            callback.onError(new AudioException("Failed to communicate with server. Please check your connection and try again later."));
+                        }
+                    });
+                } else {
+                    SwingUtilities.invokeLater(() -> {
+                        if (callback != null) {
+                            log.error("An unexpected server error occurred: ", e);
+                            callback.onError(new AudioException("An unexpected error occurred transcribing audio: " + cause.getMessage()));
+                        }
+                    });
+                }
             }
         });
 

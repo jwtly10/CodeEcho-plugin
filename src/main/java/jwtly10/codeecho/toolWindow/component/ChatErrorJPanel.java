@@ -14,7 +14,6 @@ public class ChatErrorJPanel extends JPanel {
     private void init(String errorMessage) {
         JPanel mainPanel = new JPanel();
         mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.Y_AXIS));
-        mainPanel.setBorder(BorderFactory.createLineBorder(JBColor.RED, 1));
 
         revalidate();
         repaint();
@@ -23,8 +22,7 @@ public class ChatErrorJPanel extends JPanel {
         errorPanel.setLayout(new FlowLayout(FlowLayout.LEFT));
 
         JLabel errorLabel = new JLabel(errorMessage);
-        errorLabel.setForeground(JBColor.BLACK);
-        errorLabel.setBackground(JBColor.PINK);
+        errorLabel.setForeground(JBColor.RED);
 
         errorPanel.add(errorLabel);
         mainPanel.add(errorPanel);
