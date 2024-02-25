@@ -51,15 +51,19 @@ public class CodeEchoToolWindowFactory implements ToolWindowFactory, DumbAware {
 
     private static class CodeEchoToolWindowContent {
         private final JPanel mainContentPanel = new JPanel();
-        private static ChatGPTSession openSession;
-        private final MessageWindowJPanel messageWindowJPanel;
+        private static ChatGPTSession currentSession;
+        private MessageWindowJPanel messageWindowJPanel;
         private final JLabel noChatsLabel = new JLabel("Get started by asking CodeEcho a question!");
+        private static JButton newSessionButton;
+        private List<ChatGPTSession> sessions = new ArrayList<>();
         private volatile boolean isCancelled = false;
         private volatile boolean isRequestingChatGPT = false;
         private final AtomicInteger currentReqId = new AtomicInteger(0);
 
         public CodeEchoToolWindowContent() {
-            List<ChatGPTSession> sessions = new ArrayList<>();
+
+            newSessionButton = createNewSessionButton();
+
             try {
                 sessions = ChatPersistence.loadSessions();
             } catch (FileNotFoundException e) {
@@ -67,32 +71,81 @@ public class CodeEchoToolWindowFactory implements ToolWindowFactory, DumbAware {
             } catch (Exception e) {
                 log.error("Error loading sessions", e);
             }
+
             this.messageWindowJPanel = new MessageWindowJPanel();
             if (sessions.isEmpty()) {
-                openSession = new ChatGPTSession();
-                sessions.add(openSession);
-
-                mainContentPanel.setLayout(new BorderLayout());
-                mainContentPanel.add(noChatsLabel, BorderLayout.NORTH);
-                mainContentPanel.add(messageWindowJPanel, BorderLayout.CENTER);
-                this.messageWindowJPanel.initialLoad(openSession.getMessages());
-                mainContentPanel.setBorder(JBUI.Borders.empty(30));
-                this.messageWindowJPanel.setBorder(JBUI.Borders.emptyBottom(30));
-                mainContentPanel.add(createInputPanel(), BorderLayout.SOUTH);
-
+                currentSession = new ChatGPTSession();
+                initialiseNewSessionWindow();
                 return;
             }
+
             // TODO: Support multiple session
             // For now, we only support one session
-            openSession = sessions.get(0);
+            currentSession = sessions.get(0);
 
+            // Do normal setup
             mainContentPanel.setLayout(new BorderLayout());
-
+            mainContentPanel.add(newSessionButton, BorderLayout.NORTH);
             mainContentPanel.add(messageWindowJPanel, BorderLayout.CENTER);
             mainContentPanel.setBorder(JBUI.Borders.empty(30));
-            this.messageWindowJPanel.initialLoad(openSession.getMessages());
+            this.messageWindowJPanel.initialLoad(currentSession.getMessages());
             this.messageWindowJPanel.setBorder(JBUI.Borders.emptyBottom(30));
 
+            mainContentPanel.add(createInputPanel(), BorderLayout.SOUTH);
+        }
+
+        private JButton createNewSessionButton() {
+            JButton newSession = new JButton("New Session");
+            newSession.addActionListener(e -> {
+                if (currentSession.getMessages().isEmpty()) {
+                    // No need to create a new session if the current session is empty
+                    return;
+                }
+
+                if (isRequestingChatGPT) {
+                    log.info("Request already in progress, cancelling request before clearing session");
+                    cancelOperation();
+                    isRequestingChatGPT = false;
+                }
+
+                SwingUtilities.invokeLater(() -> {
+                    currentSession = new ChatGPTSession();
+
+                    mainContentPanel.removeAll();
+                    this.messageWindowJPanel.removeAll();
+
+                    initialiseNewSessionWindow();
+
+                    mainContentPanel.revalidate();
+                    mainContentPanel.repaint();
+                });
+            });
+            return newSession;
+        }
+
+        private void initialiseNewSessionWindow() {
+            mainContentPanel.setLayout(new BorderLayout());
+            if (!sessions.isEmpty()) {
+                // New session event
+                sessions.add(0, currentSession);
+            } else {
+                // If no session was loaded on it
+                sessions.add(currentSession);
+            }
+
+            mainContentPanel.setBorder(JBUI.Borders.empty(30));
+            JPanel tmpPanel = new JPanel();
+            tmpPanel.setLayout(new BorderLayout());
+            noChatsLabel.setBorder(JBUI.Borders.empty(10));
+            tmpPanel.add(newSessionButton, BorderLayout.CENTER);
+            tmpPanel.add(noChatsLabel, BorderLayout.SOUTH);
+            noChatsLabel.setVisible(true);
+
+            mainContentPanel.add(tmpPanel, BorderLayout.NORTH);
+            this.messageWindowJPanel = new MessageWindowJPanel();
+            this.messageWindowJPanel.initialLoad(currentSession.getMessages());
+            mainContentPanel.add(messageWindowJPanel, BorderLayout.CENTER);
+            this.messageWindowJPanel.setBorder(JBUI.Borders.emptyBottom(30));
             mainContentPanel.add(createInputPanel(), BorderLayout.SOUTH);
         }
 
@@ -225,17 +278,16 @@ public class CodeEchoToolWindowFactory implements ToolWindowFactory, DumbAware {
 
         private void sendNewChatMessage(String message) {
             isCancelled = false;
-
             noChatsLabel.setVisible(false);
 
             String trimmedText = message.replaceAll("\\n+$", "");
-            if (openSession.getMessages().size() >= 10) {
+            if (currentSession.getMessages().size() >= 10) {
                 log.debug("Deleting oldest message");
-                openSession.getMessages().remove(0);
+                currentSession.getMessages().remove(0);
                 messageWindowJPanel.removeOldestMessage();
             }
 
-            openSession.addMessage(new ChatGPTMessage(ChatGPTRole.user, trimmedText));
+            currentSession.addMessage(new ChatGPTMessage(ChatGPTRole.user, trimmedText));
             this.messageWindowJPanel.addNewMessage(new ChatGPTMessage(ChatGPTRole.user, trimmedText));
 
             StreamMessageJPanel streamMessageComponent = new StreamMessageJPanel();
@@ -252,7 +304,7 @@ public class CodeEchoToolWindowFactory implements ToolWindowFactory, DumbAware {
                 ProxyService proxyService = new ProxyService(HttpClient.newHttpClient());
                 final String[] updatedContent = {""};
 
-                ChatGPTRequest req = new ChatGPTRequest(openSession.getMessages(), message);
+                ChatGPTRequest req = new ChatGPTRequest(currentSession.getMessages(), message);
                 proxyService.getChatGPTResponse(req, new AsyncCallback<>() {
                     @Override
                     public void onResult(String result) {
@@ -295,10 +347,10 @@ public class CodeEchoToolWindowFactory implements ToolWindowFactory, DumbAware {
                                 return;
                             }
                             // Simulating an empty message which will be handled by the UI as an error message, so we can keep track of errors
-                            openSession.addMessage(new ChatGPTMessage(ChatGPTRole.system, ""));
+                            currentSession.addMessage(new ChatGPTMessage(ChatGPTRole.system, ""));
                             messageWindowJPanel.addNewErrorMessage(e.getMessage());
                             try {
-                                ChatPersistence.saveSessions(List.of(openSession));
+                                ChatPersistence.saveSessions(List.of(currentSession));
                             } catch (Exception ex) {
                                 log.error("Error saving session", ex);
                             }
@@ -331,15 +383,15 @@ public class CodeEchoToolWindowFactory implements ToolWindowFactory, DumbAware {
             String finalHtmlContent = ParserService.markdownToHtml(trimmedText);
             streamMessageComponent.setText(finalHtmlContent);
 
-            if (openSession.getMessages().size() >= 10) {
+            if (currentSession.getMessages().size() >= 10) {
                 log.info("Deleting oldest message");
-                openSession.getMessages().remove(0);
+                currentSession.getMessages().remove(0);
                 messageWindowJPanel.removeOldestMessage();
             }
 
-            openSession.addMessage(new ChatGPTMessage(ChatGPTRole.system, trimmedText));
+            currentSession.addMessage(new ChatGPTMessage(ChatGPTRole.system, trimmedText));
             try {
-                ChatPersistence.saveSessions(List.of(openSession));
+                ChatPersistence.saveSessions(List.of(currentSession));
             } catch (Exception e) {
                 log.error("Error saving session", e);
             }
