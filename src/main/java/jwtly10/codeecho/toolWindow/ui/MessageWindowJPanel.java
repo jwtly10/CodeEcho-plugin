@@ -1,21 +1,23 @@
 package jwtly10.codeecho.toolWindow.ui;
 
 import com.intellij.ui.components.JBScrollPane;
-import jwtly10.codeecho.callback.AsyncCallback;
 import jwtly10.codeecho.model.ChatGPTMessage;
+import jwtly10.codeecho.toolWindow.component.ChatErrorJPanel;
+import jwtly10.codeecho.toolWindow.component.MessageJPanel;
+import jwtly10.codeecho.toolWindow.component.StreamMessageJPanel;
 
 import javax.swing.*;
 import java.awt.*;
 import java.util.List;
 
-public class MessageWindowUI extends JPanel {
+public class MessageWindowJPanel extends JPanel {
     private final JPanel messagesPanel = new JPanel();
     private Component filler = Box.createVerticalGlue();
 
-    public MessageWindowUI() {
+    public MessageWindowJPanel() {
     }
 
-    public void set(List<ChatGPTMessage> messages) {
+    public void initialLoad(List<ChatGPTMessage> messages) {
         setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
         removeAll();
         setOpaque(false);
@@ -27,8 +29,13 @@ public class MessageWindowUI extends JPanel {
         gbc.weighty = 0;
 
         for (ChatGPTMessage message : messages) {
-            MessageComponent messageComponent = new MessageComponent(message);
-            messagesPanel.add(messageComponent, gbc);
+            if (message.getContent().trim().isEmpty()) {
+                ChatErrorJPanel errorComponent = new ChatErrorJPanel("There was an error with this response, please try again.");
+                messagesPanel.add(errorComponent, gbc);
+            } else {
+                MessageJPanel messageComponent = new MessageJPanel(message);
+                messagesPanel.add(messageComponent, gbc);
+            }
         }
 
         gbc.weighty = 1;
@@ -56,6 +63,29 @@ public class MessageWindowUI extends JPanel {
         }
     }
 
+    public void addNewErrorMessage(String errorMessage) {
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.gridwidth = GridBagConstraints.REMAINDER;
+        gbc.weightx = 1;
+        gbc.weighty = 0;
+
+        if (filler != null) {
+            messagesPanel.remove(filler);
+        }
+
+        ChatErrorJPanel errorComponent = new ChatErrorJPanel(errorMessage);
+        messagesPanel.add(errorComponent, gbc);
+
+        filler = Box.createVerticalGlue();
+        gbc.weighty = 1;
+        messagesPanel.add(filler, gbc);
+
+        messagesPanel.revalidate();
+        messagesPanel.repaint();
+
+        scrollToBottom();
+    }
+
     public void addNewMessage(ChatGPTMessage message) {
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.gridwidth = GridBagConstraints.REMAINDER;
@@ -66,7 +96,7 @@ public class MessageWindowUI extends JPanel {
             messagesPanel.remove(filler);
         }
 
-        MessageComponent messageComponent = new MessageComponent(message);
+        MessageJPanel messageComponent = new MessageJPanel(message);
         messagesPanel.add(messageComponent, gbc);
 
         filler = Box.createVerticalGlue();
@@ -79,7 +109,7 @@ public class MessageWindowUI extends JPanel {
         scrollToBottom();
     }
 
-    public void streamNewMessage(JTextPane streamTextPane, AsyncCallback<ChatGPTMessage> callback) {
+    public void addNewStreamComponent(StreamMessageJPanel streamMessageComponent) {
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.gridwidth = GridBagConstraints.REMAINDER;
         gbc.weightx = 1;
@@ -89,11 +119,10 @@ public class MessageWindowUI extends JPanel {
             messagesPanel.remove(filler);
         }
 
-        MessageComponent messageComponent = new MessageComponent(streamTextPane, callback);
-        messagesPanel.add(messageComponent, gbc);
+        messagesPanel.add(streamMessageComponent, gbc);
 
-        gbc.weighty = 1;
         filler = Box.createVerticalGlue();
+        gbc.weighty = 1;
         messagesPanel.add(filler, gbc);
 
         messagesPanel.revalidate();

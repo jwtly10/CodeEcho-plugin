@@ -4,7 +4,7 @@ import com.intellij.openapi.diagnostic.Logger;
 import jwtly10.codeecho.callback.AsyncCallback;
 import jwtly10.codeecho.model.RecordModel;
 import jwtly10.codeecho.service.AudioService;
-import jwtly10.codeecho.toolWindow.component.CustomProgressBar;
+import jwtly10.codeecho.toolWindow.component.ProgressBarJPanel;
 
 import javax.swing.*;
 import java.awt.*;
@@ -26,7 +26,7 @@ public class CodeEchoUILogic {
      */
     public static JButton createRecordButton(final boolean[] isRecording,
                                              final byte[][] audioData,
-                                             CustomProgressBar progressBar,
+                                             ProgressBarJPanel progressBar,
                                              JButton playButton,
                                              AudioService audioService,
                                              JLabel messageLabel,
@@ -90,7 +90,7 @@ public class CodeEchoUILogic {
      * @return a JButton that plays the recorded audio
      */
     public static JButton createPlayButton(final byte[][] audioData,
-                                           final CustomProgressBar progressBar,
+                                           final ProgressBarJPanel progressBar,
                                            final JLabel messageLabel) {
         JButton playButton = new JButton("Play Audio");
         playButton.setEnabled(false);

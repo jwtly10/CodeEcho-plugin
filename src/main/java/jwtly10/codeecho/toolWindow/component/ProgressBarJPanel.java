@@ -3,7 +3,7 @@ package jwtly10.codeecho.toolWindow.component;
 import javax.swing.*;
 import java.awt.*;
 
-public class CustomProgressBar extends JPanel {
+public class ProgressBarJPanel extends JPanel {
     private final JProgressBar progressBar;
     private final Timer timer;
     private final JLabel timeLabel;
@@ -16,7 +16,7 @@ public class CustomProgressBar extends JPanel {
      *
      * @param dur duration in milliseconds
      */
-    public CustomProgressBar(int dur) {
+    public ProgressBarJPanel(int dur) {
         this.duration = dur;
 
         setLayout(new BorderLayout());

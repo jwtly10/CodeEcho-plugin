@@ -2,7 +2,9 @@ package jwtly10.codeecho.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.intellij.openapi.diagnostic.Logger;
 import jwtly10.codeecho.callback.AsyncCallback;
+import jwtly10.codeecho.exception.ProxyException;
 import jwtly10.codeecho.model.ChatGPTRequest;
 import jwtly10.codeecho.model.TranscriptResponse;
 
@@ -10,6 +12,7 @@ import javax.swing.*;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.ConnectException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -17,6 +20,8 @@ import java.net.http.HttpResponse;
 import java.util.Base64;
 
 public class ProxyService {
+
+    private static final Logger log = Logger.getInstance(ProxyService.class);
 
     private final HttpClient client;
 
@@ -74,16 +79,15 @@ public class ProxyService {
 
             client.sendAsync(request, HttpResponse.BodyHandlers.ofInputStream())
                     .thenAccept(response -> {
-
                         if (response.statusCode() != 200) {
                             SwingUtilities.invokeLater(() -> {
                                 if (callback != null) {
-                                    callback.onError(new Exception("Failed to get response from ChatGPT"));
+                                    log.error("Non-200 status code received: " + response.statusCode() + " " + response.body());
+                                    callback.onError(new ProxyException("Non-200 status code received: " + response.statusCode() + ". Please try again later."));
                                 }
                             });
                             return;
                         }
-
 
                         try (var reader = new BufferedReader(new InputStreamReader(response.body()))) {
                             String line;
@@ -109,14 +113,29 @@ public class ProxyService {
                                 }
                             });
                         }
+                    }).exceptionally(e -> {
+                        Throwable cause = e.getCause();
+                        if (cause instanceof ConnectException) {
+                            SwingUtilities.invokeLater(() -> {
+                                if (callback != null) {
+                                    log.error("Connection failed to server: ", e);
+                                    callback.onError(new ProxyException("Failed to communicate with server. Please check your connection and try again later."));
+                                }
+                            });
+                        } else {
+                            SwingUtilities.invokeLater(() -> {
+                                if (callback != null) {
+                                    log.error("An unexpected server error occurred: ", e);
+                                    callback.onError(new ProxyException("An unexpected error occurred: " + cause.getMessage()));
+                                }
+                            });
+                        }
+                        return null;
+
                     })
                     .join();
         } catch (Exception e) {
-            SwingUtilities.invokeLater(() -> {
-                if (callback != null) {
-                    callback.onError(e);
-                }
-            });
+            log.error("An unexpected error occurred: ", e);
         }
     }
 }

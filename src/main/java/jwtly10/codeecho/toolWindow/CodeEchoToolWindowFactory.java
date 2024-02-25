@@ -17,9 +17,9 @@ import jwtly10.codeecho.persistance.ChatPersistence;
 import jwtly10.codeecho.service.AudioService;
 import jwtly10.codeecho.service.ParserService;
 import jwtly10.codeecho.service.ProxyService;
-import jwtly10.codeecho.toolWindow.component.CustomProgressBar;
-import jwtly10.codeecho.toolWindow.ui.MessageComponent;
-import jwtly10.codeecho.toolWindow.ui.MessageWindowUI;
+import jwtly10.codeecho.toolWindow.component.ProgressBarJPanel;
+import jwtly10.codeecho.toolWindow.component.StreamMessageJPanel;
+import jwtly10.codeecho.toolWindow.ui.MessageWindowJPanel;
 import org.jetbrains.annotations.NotNull;
 
 import javax.swing.*;
@@ -44,14 +44,14 @@ public class CodeEchoToolWindowFactory implements ToolWindowFactory, DumbAware {
     @Override
     public void createToolWindowContent(@NotNull Project project, @NotNull ToolWindow toolWindow) {
         CodeEchoToolWindowContent toolWindowContent = new CodeEchoToolWindowContent();
-        Content content = toolWindow.getContentManager().getFactory().createContent(toolWindowContent.getContentPanel(), "", false);
+        Content content = toolWindow.getContentManager().getFactory().createContent(toolWindowContent.getMainContentPanel(), "", false);
         toolWindow.getContentManager().addContent(content);
     }
 
     private static class CodeEchoToolWindowContent {
-        private final JPanel contentPanel = new JPanel();
+        private final JPanel mainContentPanel = new JPanel();
         private static ChatGPTSession openSession;
-        private final MessageWindowUI messageWindowUI;
+        private final MessageWindowJPanel messageWindowJPanel;
         private final JLabel noChatsLabel = new JLabel("Get started by asking CodeEcho a question!");
 
         public CodeEchoToolWindowContent() {
@@ -63,32 +63,33 @@ public class CodeEchoToolWindowFactory implements ToolWindowFactory, DumbAware {
             } catch (Exception e) {
                 log.error("Error loading sessions", e);
             }
-            this.messageWindowUI = new MessageWindowUI();
+            this.messageWindowJPanel = new MessageWindowJPanel();
             if (sessions.isEmpty()) {
-
                 openSession = new ChatGPTSession();
                 sessions.add(openSession);
 
-                contentPanel.setLayout(new BorderLayout());
-                contentPanel.add(noChatsLabel, BorderLayout.NORTH);
-                contentPanel.add(messageWindowUI, BorderLayout.CENTER);
-                this.messageWindowUI.set(openSession.getMessages());
-                contentPanel.setBorder(JBUI.Borders.empty(30));
-                this.messageWindowUI.setBorder(JBUI.Borders.emptyBottom(30));
-                contentPanel.add(createInputPanel(), BorderLayout.SOUTH);
+                mainContentPanel.setLayout(new BorderLayout());
+                mainContentPanel.add(noChatsLabel, BorderLayout.NORTH);
+                mainContentPanel.add(messageWindowJPanel, BorderLayout.CENTER);
+                this.messageWindowJPanel.initialLoad(openSession.getMessages());
+                mainContentPanel.setBorder(JBUI.Borders.empty(30));
+                this.messageWindowJPanel.setBorder(JBUI.Borders.emptyBottom(30));
+                mainContentPanel.add(createInputPanel(), BorderLayout.SOUTH);
 
                 return;
             }
+            // TODO: Support multiple session
+            // For now, we only support one session
             openSession = sessions.get(0);
 
-            contentPanel.setLayout(new BorderLayout());
+            mainContentPanel.setLayout(new BorderLayout());
 
-            contentPanel.add(messageWindowUI, BorderLayout.CENTER);
-            contentPanel.setBorder(JBUI.Borders.empty(30));
-            this.messageWindowUI.set(openSession.getMessages());
-            this.messageWindowUI.setBorder(JBUI.Borders.emptyBottom(30));
+            mainContentPanel.add(messageWindowJPanel, BorderLayout.CENTER);
+            mainContentPanel.setBorder(JBUI.Borders.empty(30));
+            this.messageWindowJPanel.initialLoad(openSession.getMessages());
+            this.messageWindowJPanel.setBorder(JBUI.Borders.emptyBottom(30));
 
-            contentPanel.add(createInputPanel(), BorderLayout.SOUTH);
+            mainContentPanel.add(createInputPanel(), BorderLayout.SOUTH);
         }
 
         public JPanel createInputPanel() {
@@ -111,47 +112,46 @@ public class CodeEchoToolWindowFactory implements ToolWindowFactory, DumbAware {
             JButton sendButton = new JButton(sendIcon);
             sendButton.setPreferredSize(new Dimension(50, 50));
 
-            JTextArea textField = new JTextArea();
-            textField.setMargin(JBUI.insets(10));
-            textField.setText("Message CodeEcho...");
-            textField.setLineWrap(true);
-            textField.setWrapStyleWord(true);
-            textField.setBorder(BorderFactory.createLineBorder(JBColor.BLACK));
-            textField.setForeground(JBColor.BLACK);
+            JTextArea mainInputField = new JTextArea();
+            mainInputField.setMargin(JBUI.insets(10));
+            mainInputField.setText("Message CodeEcho...");
+            mainInputField.setLineWrap(true);
+            mainInputField.setWrapStyleWord(true);
+            mainInputField.setBorder(BorderFactory.createLineBorder(JBColor.BLACK));
+            mainInputField.setForeground(JBColor.BLACK);
             Border margin = JBUI.Borders.empty(10);
-            textField.setBorder(new CompoundBorder(textField.getBorder(), margin));
-            textField.addFocusListener(new FocusListener() {
+            mainInputField.setBorder(new CompoundBorder(mainInputField.getBorder(), margin));
+            mainInputField.addFocusListener(new FocusListener() {
                 @Override
                 public void focusGained(FocusEvent e) {
-                    if (textField.getText().equals("Message CodeEcho...")) {
-                        textField.setText("");
-                        textField.setForeground(JBColor.BLACK);
+                    if (mainInputField.getText().equals("Message CodeEcho...")) {
+                        mainInputField.setText("");
+                        mainInputField.setForeground(JBColor.BLACK);
                     }
                 }
 
                 @Override
                 public void focusLost(FocusEvent e) {
-                    if (textField.getText().isEmpty()) {
-                        textField.setForeground(JBColor.BLACK);
-                        textField.setText("Message CodeEcho...");
+                    if (mainInputField.getText().isEmpty()) {
+                        mainInputField.setForeground(JBColor.BLACK);
+                        mainInputField.setText("Message CodeEcho...");
                     }
                 }
             });
 
-            textField.addKeyListener(new java.awt.event.KeyAdapter() {
+            mainInputField.addKeyListener(new java.awt.event.KeyAdapter() {
                 public void keyReleased(java.awt.event.KeyEvent evt) {
                     if ((evt.getKeyCode() == java.awt.event.KeyEvent.VK_ENTER) && evt.isControlDown()) {
-                        if (canWeSendMessage(new ChatGPTMessage(ChatGPTRole.user, textField.getText()), textField)) {
-                            sendNewChatMessage(textField);
-                            return;
+                        if (canWeSendMessage(new ChatGPTMessage(ChatGPTRole.user, mainInputField.getText()), mainInputField)) {
+                            sendNewChatMessage(mainInputField);
                         }
                     }
                 }
             });
 
             sendButton.addActionListener(e -> {
-                if (canWeSendMessage(new ChatGPTMessage(ChatGPTRole.user, textField.getText()), textField)) {
-                    sendNewChatMessage(textField);
+                if (canWeSendMessage(new ChatGPTMessage(ChatGPTRole.user, mainInputField.getText()), mainInputField)) {
+                    sendNewChatMessage(mainInputField);
                 }
             });
 
@@ -159,20 +159,20 @@ public class CodeEchoToolWindowFactory implements ToolWindowFactory, DumbAware {
             JLabel messageLabel = new JLabel("Error messages go here");
 
             AudioService audioService = new AudioService();
-            CustomProgressBar progressBar = new CustomProgressBar(5000);
+            ProgressBarJPanel progressBar = new ProgressBarJPanel(5000);
 
             final boolean[] isRecording = {false};
             final byte[][] audioData = new byte[1][];
 
             JButton playButton = createPlayButton(audioData, progressBar, messageLabel);
-            JButton recordButton = createRecordButton(isRecording, audioData, progressBar, playButton, audioService, messageLabel, textField);
+            JButton recordButton = createRecordButton(isRecording, audioData, progressBar, playButton, audioService, messageLabel, mainInputField);
             progressBar.setVisible(false);
 
             gbc.fill = GridBagConstraints.HORIZONTAL;
             gbc.weightx = 1.0;
             gbc.gridx = 0;
             gbc.gridy = 0;
-            innerPanel.add(textField, gbc);
+            innerPanel.add(mainInputField, gbc);
 
             JPanel pinPanel = new JPanel();
             pinPanel.setLayout(new BorderLayout());
@@ -211,21 +211,20 @@ public class CodeEchoToolWindowFactory implements ToolWindowFactory, DumbAware {
             noChatsLabel.setVisible(false);
 
             String text = textField.getText();
-            // Hack to remove trailing newline
             String trimmedText = text.replaceAll("\\n+$", "");
 
-            // Shortterm fix to remove old messages
             if (openSession.getMessages().size() >= 10) {
                 log.debug("Deleting oldest message");
                 openSession.getMessages().remove(0);
-                messageWindowUI.removeOldestMessage();
+                messageWindowJPanel.removeOldestMessage();
             }
 
             openSession.addMessage(new ChatGPTMessage(ChatGPTRole.user, trimmedText));
-            this.messageWindowUI.addNewMessage(new ChatGPTMessage(ChatGPTRole.user, trimmedText));
+            this.messageWindowJPanel.addNewMessage(new ChatGPTMessage(ChatGPTRole.user, trimmedText));
 
-            JTextPane streamTextPane = new JTextPane();
-            this.messageWindowUI.streamNewMessage(streamTextPane, null);
+            StreamMessageJPanel streamMessageComponent = new StreamMessageJPanel();
+            this.messageWindowJPanel.addNewStreamComponent(streamMessageComponent);
+            streamMessageComponent.setHidden(true);
 
             Thread proxyThread = new Thread(() -> {
                 ProxyService proxyService = new ProxyService(HttpClient.newHttpClient());
@@ -236,39 +235,41 @@ public class CodeEchoToolWindowFactory implements ToolWindowFactory, DumbAware {
                     @Override
                     public void onResult(String result) {
                         SwingUtilities.invokeLater(() -> {
+                            streamMessageComponent.setHidden(false);
                             updatedContent[0] = updatedContent[0].concat(result + "\n");
                             String htmlContent = ParserService.markdownToHtml(updatedContent[0]);
                             log.info("DEBUG: Html content stream: " + htmlContent);
-                            streamTextPane.setContentType("text/html");
-                            streamTextPane.setText(htmlContent);
-                            streamTextPane.setPreferredSize(new Dimension(600, MessageComponent.getContentHeight(600, htmlContent)));
-                            messageWindowUI.scrollToBottom();
+                            streamMessageComponent.setHidden(false);
+                            streamMessageComponent.setText(htmlContent);
+                            messageWindowJPanel.scrollToBottom();
                         });
                     }
 
                     @Override
                     public void onError(Exception e) {
                         SwingUtilities.invokeLater(() -> {
-                            // TODO Handle errors better
-                            log.error("Error making chat gpt request", e);
+                            // Simulating an empty message which will be handled by the UI as an error message, so we can keep track of errors
+                            openSession.addMessage(new ChatGPTMessage(ChatGPTRole.system, ""));
+                            messageWindowJPanel.addNewErrorMessage(e.getMessage());
+                            try {
+                                ChatPersistence.saveSessions(List.of(openSession));
+                            } catch (Exception ex) {
+                                log.error("Error saving session", ex);
+                            }
                         });
                     }
 
                     @Override
                     public void onComplete() {
-                        // Hack to remove trailing newline
                         SwingUtilities.invokeLater(() -> {
                             String trimmedText = updatedContent[0].replaceAll("\\n+$", "");
                             String finalHtmlContent = ParserService.markdownToHtml(trimmedText);
-                            streamTextPane.setContentType("text/html");
-                            streamTextPane.setText(finalHtmlContent);
-                            streamTextPane.setPreferredSize(new Dimension(600, MessageComponent.getContentHeight(600, finalHtmlContent)));
+                            streamMessageComponent.setText(finalHtmlContent);
 
-                            // Shortterm fix to remove old messages
                             if (openSession.getMessages().size() >= 10) {
                                 log.info("Deleting oldest message");
                                 openSession.getMessages().remove(0);
-                                messageWindowUI.removeOldestMessage();
+                                messageWindowJPanel.removeOldestMessage();
                             }
 
                             openSession.addMessage(new ChatGPTMessage(ChatGPTRole.system, trimmedText));
@@ -290,8 +291,8 @@ public class CodeEchoToolWindowFactory implements ToolWindowFactory, DumbAware {
             return !(message.getContent() == null || message.getContent().isEmpty() || message.getContent().equals("Message CodeEcho..."));
         }
 
-        public JPanel getContentPanel() {
-            return contentPanel;
+        public JPanel getMainContentPanel() {
+            return mainContentPanel;
         }
     }
 }
