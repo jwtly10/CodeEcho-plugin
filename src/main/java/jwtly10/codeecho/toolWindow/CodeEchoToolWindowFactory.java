@@ -33,6 +33,7 @@ import java.net.http.HttpClient;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static jwtly10.codeecho.toolWindow.ui.CodeEchoUILogic.createPlayButton;
 import static jwtly10.codeecho.toolWindow.ui.CodeEchoUILogic.createRecordButton;
@@ -53,6 +54,9 @@ public class CodeEchoToolWindowFactory implements ToolWindowFactory, DumbAware {
         private static ChatGPTSession openSession;
         private final MessageWindowJPanel messageWindowJPanel;
         private final JLabel noChatsLabel = new JLabel("Get started by asking CodeEcho a question!");
+        private volatile boolean isCancelled = false;
+        private volatile boolean isRequestingChatGPT = false;
+        private final AtomicInteger currentReqId = new AtomicInteger(0);
 
         public CodeEchoToolWindowContent() {
             List<ChatGPTSession> sessions = new ArrayList<>();
@@ -142,17 +146,13 @@ public class CodeEchoToolWindowFactory implements ToolWindowFactory, DumbAware {
             mainInputField.addKeyListener(new java.awt.event.KeyAdapter() {
                 public void keyReleased(java.awt.event.KeyEvent evt) {
                     if ((evt.getKeyCode() == java.awt.event.KeyEvent.VK_ENTER) && evt.isControlDown()) {
-                        if (canWeSendMessage(new ChatGPTMessage(ChatGPTRole.user, mainInputField.getText()), mainInputField)) {
-                            sendNewChatMessage(mainInputField);
-                        }
+                        handleNewReq(mainInputField);
                     }
                 }
             });
 
             sendButton.addActionListener(e -> {
-                if (canWeSendMessage(new ChatGPTMessage(ChatGPTRole.user, mainInputField.getText()), mainInputField)) {
-                    sendNewChatMessage(mainInputField);
-                }
+                handleNewReq(mainInputField);
             });
 
             /* TODO: Remove this message label code spaghetti */
@@ -207,12 +207,28 @@ public class CodeEchoToolWindowFactory implements ToolWindowFactory, DumbAware {
             return inputPanel;
         }
 
-        private void sendNewChatMessage(JTextArea textField) {
+        private void handleNewReq(JTextArea mainInputField) {
+            if (isRequestingChatGPT) {
+                log.info("Request already in progress, cancelling request");
+                cancelOperation();
+                isRequestingChatGPT = false;
+                return;
+            }
+
+            if (canWeSendMessage(new ChatGPTMessage(ChatGPTRole.user, mainInputField.getText()), mainInputField)) {
+                isRequestingChatGPT = true;
+                sendNewChatMessage(mainInputField.getText());
+                mainInputField.setText("");
+                mainInputField.requestFocus();
+            }
+        }
+
+        private void sendNewChatMessage(String message) {
+            isCancelled = false;
+
             noChatsLabel.setVisible(false);
 
-            String text = textField.getText();
-            String trimmedText = text.replaceAll("\\n+$", "");
-
+            String trimmedText = message.replaceAll("\\n+$", "");
             if (openSession.getMessages().size() >= 10) {
                 log.debug("Deleting oldest message");
                 openSession.getMessages().remove(0);
@@ -226,28 +242,58 @@ public class CodeEchoToolWindowFactory implements ToolWindowFactory, DumbAware {
             this.messageWindowJPanel.addNewStreamComponent(streamMessageComponent);
             streamMessageComponent.setHidden(true);
 
+
             Thread proxyThread = new Thread(() -> {
+                int reqId = currentReqId.incrementAndGet();
+                // Atomic integer to make sure we only run onResult > isCancelled once
+                // Thread specific
+                AtomicInteger count = new AtomicInteger();
+
                 ProxyService proxyService = new ProxyService(HttpClient.newHttpClient());
                 final String[] updatedContent = {""};
 
-                ChatGPTRequest req = new ChatGPTRequest(openSession.getMessages(), text);
+                ChatGPTRequest req = new ChatGPTRequest(openSession.getMessages(), message);
                 proxyService.getChatGPTResponse(req, new AsyncCallback<>() {
                     @Override
                     public void onResult(String result) {
                         SwingUtilities.invokeLater(() -> {
-                            streamMessageComponent.setHidden(false);
-                            updatedContent[0] = updatedContent[0].concat(result + "\n");
-                            String htmlContent = ParserService.markdownToHtml(updatedContent[0]);
-                            log.info("DEBUG: Html content stream: " + htmlContent);
-                            streamMessageComponent.setHidden(false);
-                            streamMessageComponent.setText(htmlContent);
-                            messageWindowJPanel.scrollToBottom();
+                            if (reqId != currentReqId.get()) {
+                                log.info("Request id mismatch, ignoring result");
+                                return;
+                            }
+                            if (isCancelled && count.get() == 0) {
+                                count.getAndIncrement();
+                                log.info("Request cancelled, saving as is");
+                                saveGPTMessage(updatedContent, streamMessageComponent);
+                                // This prevents constantly updating the UI with the same message
+                                // And allows us to ignore any subsequent messages from the stream
+                                isRequestingChatGPT = false;
+                                return;
+                            }
+                            if (isRequestingChatGPT) {
+                                streamMessageComponent.setHidden(false);
+                                updatedContent[0] = updatedContent[0].concat(result + "\n");
+                                String htmlContent = ParserService.markdownToHtml(updatedContent[0]);
+                                log.info("DEBUG: Html content stream: " + htmlContent);
+                                streamMessageComponent.setHidden(false);
+                                streamMessageComponent.setText(htmlContent);
+                                messageWindowJPanel.scrollToBottom();
+                            }
                         });
                     }
 
                     @Override
                     public void onError(Exception e) {
                         SwingUtilities.invokeLater(() -> {
+                            if (reqId != currentReqId.get()) {
+                                log.info("Request id mismatch, ignoring result");
+                                return;
+                            }
+                            isRequestingChatGPT = false;
+                            if (isCancelled) {
+                                log.error("Error during request cancellation: ", e);
+                                return;
+                            }
                             // Simulating an empty message which will be handled by the UI as an error message, so we can keep track of errors
                             openSession.addMessage(new ChatGPTMessage(ChatGPTRole.system, ""));
                             messageWindowJPanel.addNewErrorMessage(e.getMessage());
@@ -261,25 +307,18 @@ public class CodeEchoToolWindowFactory implements ToolWindowFactory, DumbAware {
 
                     @Override
                     public void onComplete() {
+                        if (reqId != currentReqId.get()) {
+                            log.info("Request id mismatch, ignoring result");
+                            return;
+                        }
                         SwingUtilities.invokeLater(() -> {
-                            String trimmedText = updatedContent[0].replaceAll("\\n+$", "");
-                            String finalHtmlContent = ParserService.markdownToHtml(trimmedText);
-                            streamMessageComponent.setText(finalHtmlContent);
-
-                            if (openSession.getMessages().size() >= 10) {
-                                log.info("Deleting oldest message");
-                                openSession.getMessages().remove(0);
-                                messageWindowJPanel.removeOldestMessage();
+                            if (isCancelled) {
+                                log.info("Request was cancelled, data should be saved already.");
+                                isRequestingChatGPT = false;
+                                return;
                             }
-
-                            openSession.addMessage(new ChatGPTMessage(ChatGPTRole.system, trimmedText));
-                            try {
-                                ChatPersistence.saveSessions(List.of(openSession));
-                                textField.setText("");
-                                textField.requestFocusInWindow();
-                            } catch (Exception e) {
-                                log.error("Error saving session", e);
-                            }
+                            saveGPTMessage(updatedContent, streamMessageComponent);
+                            isRequestingChatGPT = false;
                         });
                     }
                 });
@@ -287,8 +326,31 @@ public class CodeEchoToolWindowFactory implements ToolWindowFactory, DumbAware {
             proxyThread.start();
         }
 
+        private void saveGPTMessage(String[] updatedContent, StreamMessageJPanel streamMessageComponent) {
+            String trimmedText = updatedContent[0].replaceAll("\\n+$", "");
+            String finalHtmlContent = ParserService.markdownToHtml(trimmedText);
+            streamMessageComponent.setText(finalHtmlContent);
+
+            if (openSession.getMessages().size() >= 10) {
+                log.info("Deleting oldest message");
+                openSession.getMessages().remove(0);
+                messageWindowJPanel.removeOldestMessage();
+            }
+
+            openSession.addMessage(new ChatGPTMessage(ChatGPTRole.system, trimmedText));
+            try {
+                ChatPersistence.saveSessions(List.of(openSession));
+            } catch (Exception e) {
+                log.error("Error saving session", e);
+            }
+        }
+
         private boolean canWeSendMessage(ChatGPTMessage message, JTextArea textField) {
             return !(message.getContent() == null || message.getContent().isEmpty() || message.getContent().equals("Message CodeEcho..."));
+        }
+
+        public void cancelOperation() {
+            isCancelled = true;
         }
 
         public JPanel getMainContentPanel() {
