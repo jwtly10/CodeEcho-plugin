@@ -1,5 +1,8 @@
 package jwtly10.codeecho.toolWindow;
 
+import com.intellij.ide.ui.LafManager;
+import com.intellij.ide.ui.LafManagerListener;
+import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.DumbAware;
 import com.intellij.openapi.project.Project;
@@ -60,6 +63,16 @@ public class CodeEchoToolWindowFactory implements ToolWindowFactory, DumbAware {
         private final AtomicInteger currentReqId = new AtomicInteger(0);
 
         public CodeEchoToolWindowContent() {
+
+            ApplicationManager.getApplication().getMessageBus().connect().subscribe(LafManagerListener.TOPIC, new LafManagerListener() {
+                @Override
+                public void lookAndFeelChanged(LafManager source) {
+                    SwingUtilities.invokeLater(() -> {
+                        mainContentPanel.revalidate();
+                        mainContentPanel.repaint();
+                    });
+                }
+            });
 
             newSessionButton = createNewSessionButton();
 
@@ -177,8 +190,8 @@ public class CodeEchoToolWindowFactory implements ToolWindowFactory, DumbAware {
             mainInputField.setText("Message CodeEcho...");
             mainInputField.setLineWrap(true);
             mainInputField.setWrapStyleWord(true);
-            mainInputField.setBorder(BorderFactory.createLineBorder(JBColor.BLACK));
-            mainInputField.setForeground(JBColor.BLACK);
+            mainInputField.setBorder(BorderFactory.createLineBorder(CColor.BLACK));
+            mainInputField.setForeground(CColor.BLACK);
             Border margin = JBUI.Borders.empty(10);
             mainInputField.setBorder(new CompoundBorder(mainInputField.getBorder(), margin));
             mainInputField.addFocusListener(new FocusListener() {
@@ -186,14 +199,14 @@ public class CodeEchoToolWindowFactory implements ToolWindowFactory, DumbAware {
                 public void focusGained(FocusEvent e) {
                     if (mainInputField.getText().equals("Message CodeEcho...")) {
                         mainInputField.setText("");
-                        mainInputField.setForeground(JBColor.BLACK);
+                        mainInputField.setForeground(CColor.BLACK);
                     }
                 }
 
                 @Override
                 public void focusLost(FocusEvent e) {
                     if (mainInputField.getText().isEmpty()) {
-                        mainInputField.setForeground(JBColor.BLACK);
+                        mainInputField.setForeground(CColor.BLACK);
                         mainInputField.setText("Message CodeEcho...");
                     }
                 }

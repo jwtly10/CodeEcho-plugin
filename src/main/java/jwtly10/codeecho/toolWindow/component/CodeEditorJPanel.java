@@ -57,15 +57,18 @@ public class CodeEditorJPanel extends JPanel {
     public void set(String code, String language) {
         SwingUtilities.invokeLater(() -> {
             try {
-                if (UIManager.getLookAndFeel().getName().contains("Light")) {
-                    Theme theme = Theme.load(getClass().getResourceAsStream(
-                            "/themes/code/idea.xml"));
-                    theme.apply(codeBlock);
+                // Hack to determine if the theme is light or dark
+                Color backgroundColor = UIManager.getColor("Panel.background");
+                float[] hsbValues = Color.RGBtoHSB(backgroundColor.getRed(), backgroundColor.getGreen(), backgroundColor.getBlue(), null);
+                boolean isLightTheme = hsbValues[2] > 0.5;
+
+                Theme theme;
+                if (isLightTheme) {
+                    theme = Theme.load(getClass().getResourceAsStream("/themes/code/idea.xml"));
                 } else {
-                    Theme theme = Theme.load(getClass().getResourceAsStream(
-                            "/themes/code/dark.xml"));
-                    theme.apply(codeBlock);
+                    theme = Theme.load(getClass().getResourceAsStream("/themes/code/dark.xml"));
                 }
+                theme.apply(codeBlock);
 
                 codeBlock.setFont(new Font("JetBrains Mono", Font.PLAIN, 14));
                 codeBlock.setBackground(CColor.TRANSPARENT);
