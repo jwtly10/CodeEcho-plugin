@@ -1,9 +1,6 @@
 package jwtly10.codeecho.toolWindow.component;
 
-import com.intellij.ui.JBColor;
-
 import javax.swing.*;
-import javax.swing.border.Border;
 import java.awt.*;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -42,12 +39,10 @@ public class StreamMessageJPanel extends JPanel {
 
         JPanel msgPanel = new JPanel();
         msgPanel.setLayout(new BorderLayout());
-        Border border1 = BorderFactory.createEmptyBorder(10, 10, 10, 10);
-        Border border2 = BorderFactory.createLineBorder(JBColor.BLACK, 1);
-        msgPanel.setBorder(BorderFactory.createCompoundBorder(border2, border1));
+        msgPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
         msgPanel.add(streamMessageArea, BorderLayout.CENTER);
 
-        add(metaPanel, BorderLayout.NORTH);
+//        add(metaPanel, BorderLayout.NORTH);
         add(msgPanel, BorderLayout.CENTER);
 
         revalidate();

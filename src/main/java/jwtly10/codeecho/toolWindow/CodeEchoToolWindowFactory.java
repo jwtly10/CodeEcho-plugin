@@ -320,7 +320,6 @@ public class CodeEchoToolWindowFactory implements ToolWindowFactory, DumbAware {
                             if (isRequestingChatGPT) {
                                 streamMessageComponent.setHidden(false);
                                 updatedContent[0] = updatedContent[0].concat(result + "\n");
-                                streamMessageComponent.setHidden(false);
 
                                 // TODO Implement a better way to handle code blocks
                                 // This is a hack to get around partial code blocks
@@ -332,7 +331,6 @@ public class CodeEchoToolWindowFactory implements ToolWindowFactory, DumbAware {
                                 } else {
                                     streamMessageComponent.setText(updatedContent[0]);
                                 }
-
                                 messageWindowJPanel.scrollToBottom();
                             }
                         });

@@ -3,6 +3,7 @@ package jwtly10.codeecho.toolWindow.component;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.ui.JBColor;
 import com.intellij.util.ui.JBUI;
+import jwtly10.codeecho.toolWindow.utils.CColor;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
 import org.fife.ui.rsyntaxtextarea.Theme;
@@ -20,6 +21,10 @@ public class CodeEditorJPanel extends JPanel {
     public CodeEditorJPanel() {
         codeBlock = new RSyntaxTextArea();
         setLayout(new BorderLayout());
+        SwingUtilities.invokeLater(() -> {
+            setBackground(JBColor.background());
+            setOpaque(false);
+        });
         init();
     }
 
@@ -27,7 +32,6 @@ public class CodeEditorJPanel extends JPanel {
         codeBlock.setAntiAliasingEnabled(true);
         codeBlock.setEditable(false);
         codeBlock.setLineWrap(true);
-        codeBlock.setBackground(JBColor.background());
         codeBlock.setActiveLineRange(0, 0);
         codeBlock.setHighlightCurrentLine(false);
         codeBlock.setBracketMatchingEnabled(false);
@@ -63,7 +67,8 @@ public class CodeEditorJPanel extends JPanel {
                     theme.apply(codeBlock);
                 }
 
-//                codeBlock.setBackground(JBColor.background());
+                codeBlock.setFont(new Font("JetBrains Mono", Font.PLAIN, 14));
+                codeBlock.setBackground(CColor.TRANSPARENT);
             } catch (Exception e) {
                 log.error("Failed to load theme, defaulting", e);
             }

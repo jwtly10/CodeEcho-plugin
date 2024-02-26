@@ -28,11 +28,10 @@ public class ParserService {
         Parser parser = Parser.builder(options).build();
         HtmlRenderer renderer = HtmlRenderer.builder(options).build();
 
-        // TODO: Figure out how to horizontal scroll the code block instead of wrapping
         String css = "<style type=\"text/css\">"
-                + "p { margin: 0; padding: 0; }"
-                + "pre { background-color: #000000; padding: 2px 4px; }"
+                + "p { margin: 0; padding: 0;}"
                 + "pre, code { white-space: pre-wrap; word-wrap: break-word; }"
+                + "body { font-family: Arial; font-size: 11px;}"
                 + "</style>";
         String content = renderer.render(parser.parse(markdownText));
         return css + content;
