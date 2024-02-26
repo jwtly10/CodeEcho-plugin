@@ -3,7 +3,6 @@ package jwtly10.codeecho.toolWindow.component;
 import com.intellij.ui.JBColor;
 import jwtly10.codeecho.model.ChatGPTMessage;
 import jwtly10.codeecho.model.ChatGPTRole;
-import jwtly10.codeecho.service.ParserService;
 
 import javax.swing.*;
 import javax.swing.border.Border;
@@ -42,12 +41,9 @@ public class MessageJPanel extends JPanel {
         Border border1 = BorderFactory.createEmptyBorder(10, 10, 10, 10);
         Border border2 = BorderFactory.createLineBorder(JBColor.BLACK, 1);
         msgPanel.setBorder(BorderFactory.createCompoundBorder(border2, border1));
-        JTextPane msgContent = new JTextPane();
-        String htmlContent = ParserService.markdownToHtml(msg.getContent());
-        msgContent.setContentType("text/html");
-        msgContent.setEditable(false);
 
-        msgContent.setText(htmlContent);
+        TextJPanelGenerator msgContent = new TextJPanelGenerator();
+        msgContent.setText(msg.getContent());
         msgPanel.add(msgContent, BorderLayout.CENTER);
 
         add(metaPanel, BorderLayout.NORTH);

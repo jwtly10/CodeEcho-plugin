@@ -33,6 +33,8 @@ public class MessageWindowJPanel extends JPanel {
             } else {
                 MessageJPanel messageComponent = new MessageJPanel(message);
                 innerMessagesPanel.add(messageComponent);
+//                MessageComponent messageComponent = new MessageComponent(message.getContent());
+//                innerMessagesPanel.add(messageComponent);
             }
         }
 

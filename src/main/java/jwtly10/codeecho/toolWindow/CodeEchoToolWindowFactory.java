@@ -15,7 +15,6 @@ import jwtly10.codeecho.model.ChatGPTRole;
 import jwtly10.codeecho.model.ChatGPTSession;
 import jwtly10.codeecho.persistance.ChatPersistence;
 import jwtly10.codeecho.service.AudioService;
-import jwtly10.codeecho.service.ParserService;
 import jwtly10.codeecho.service.ProxyService;
 import jwtly10.codeecho.toolWindow.component.CustomButton;
 import jwtly10.codeecho.toolWindow.component.StreamMessageJPanel;
@@ -291,7 +290,6 @@ public class CodeEchoToolWindowFactory implements ToolWindowFactory, DumbAware {
             this.messageWindowJPanel.addNewStreamComponent(streamMessageComponent);
             streamMessageComponent.setHidden(true);
 
-
             Thread proxyThread = new Thread(() -> {
                 int reqId = currentReqId.incrementAndGet();
                 // Atomic integer to make sure we only run onResult > isCancelled once
@@ -322,10 +320,19 @@ public class CodeEchoToolWindowFactory implements ToolWindowFactory, DumbAware {
                             if (isRequestingChatGPT) {
                                 streamMessageComponent.setHidden(false);
                                 updatedContent[0] = updatedContent[0].concat(result + "\n");
-                                String htmlContent = ParserService.markdownToHtml(updatedContent[0]);
-                                log.info("DEBUG: Html content stream: " + htmlContent);
                                 streamMessageComponent.setHidden(false);
-                                streamMessageComponent.setText(htmlContent);
+
+                                // TODO Implement a better way to handle code blocks
+                                // This is a hack to get around partial code blocks
+                                // This will allow the parser to render code blocks, even if they are not
+                                // complete
+                                int c = occurs(updatedContent[0], "```");
+                                if (c > 0 && c % 2 != 0) {
+                                    streamMessageComponent.setText(updatedContent[0] + "```");
+                                } else {
+                                    streamMessageComponent.setText(updatedContent[0]);
+                                }
+
                                 messageWindowJPanel.scrollToBottom();
                             }
                         });
@@ -376,9 +383,8 @@ public class CodeEchoToolWindowFactory implements ToolWindowFactory, DumbAware {
         }
 
         private void saveGPTMessage(String[] updatedContent, StreamMessageJPanel streamMessageComponent) {
+            // Cleaning the string before saving
             String trimmedText = updatedContent[0].replaceAll("\\n+$", "");
-            String finalHtmlContent = ParserService.markdownToHtml(trimmedText);
-            streamMessageComponent.setText(finalHtmlContent);
 
             if (currentSession.getMessages().size() >= 10) {
                 log.info("Deleting oldest message");
@@ -404,6 +410,16 @@ public class CodeEchoToolWindowFactory implements ToolWindowFactory, DumbAware {
 
         public JPanel getMainContentPanel() {
             return mainContentPanel;
+        }
+
+        private static int occurs(String str, String subStr) {
+            int count = 0;
+            int fromIndex = 0;
+            while ((fromIndex = str.indexOf(subStr, fromIndex)) != -1) {
+                count++;
+                fromIndex++;
+            }
+            return count;
         }
     }
 }
