@@ -70,7 +70,7 @@ public class CodeEditorJPanel extends JPanel {
                 }
                 theme.apply(codeBlock);
 
-                codeBlock.setFont(new Font("JetBrains Mono", Font.PLAIN, 14));
+                codeBlock.setFont(new Font("JetBrains Mono", Font.PLAIN, 15));
                 codeBlock.setBackground(CColor.TRANSPARENT);
             } catch (Exception e) {
                 log.error("Failed to load theme, defaulting", e);

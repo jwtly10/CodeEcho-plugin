@@ -7,12 +7,14 @@ import jwtly10.codeecho.model.SectionType;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static jwtly10.codeecho.model.SectionType.SecType;
 
 public class ParserService {
+    private static final Logger log = Logger.getLogger(ParserService.class.getName());
     private static final Pattern codeBlockPattern = Pattern.compile("```(\\w*)\\n(.*?)```", Pattern.DOTALL);
 
     /**
@@ -24,16 +26,17 @@ public class ParserService {
      */
     public static String markdownToHtml(String markdownText) {
         MutableDataSet options = new MutableDataSet();
-        options.set(HtmlRenderer.SOFT_BREAK, "<br />\n");
+        options.set(HtmlRenderer.HARD_BREAK, "<br />\n");
         Parser parser = Parser.builder(options).build();
         HtmlRenderer renderer = HtmlRenderer.builder(options).build();
 
         String css = "<style type=\"text/css\">"
-                + "p { margin: 0; padding: 0;}"
+                + "p { margin: 0; padding: 0; line-height: 3;}"
                 + "pre, code { white-space: pre-wrap; word-wrap: break-word; }"
-                + "body { font-family: Arial; font-size: 11px;}"
+                + "body { font-family: Arial; font-size: 12px;}"
                 + "</style>";
         String content = renderer.render(parser.parse(markdownText));
+        log.info("DEBUG: HTML content: " + content);
         return css + content;
     }
 

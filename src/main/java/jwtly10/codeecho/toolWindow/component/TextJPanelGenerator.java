@@ -53,7 +53,7 @@ public class TextJPanelGenerator extends JPanel {
                         horizontalPanel.setBackground(JBColor.background());
                         textPane.setOpaque(false);
                         textPane.setBackground(JBColor.background());
-                        textPane.setFont(new Font("Arial", Font.PLAIN, 14));
+                        textPane.setFont(new Font("Arial", Font.PLAIN, 15));
                     });
                     textPane.setContentType("text/html");
                     textPane.setEditable(false);

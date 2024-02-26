@@ -9,6 +9,7 @@ import com.intellij.openapi.project.Project;
 import com.intellij.openapi.wm.ToolWindow;
 import com.intellij.openapi.wm.ToolWindowFactory;
 import com.intellij.ui.JBColor;
+import com.intellij.ui.components.JBScrollPane;
 import com.intellij.ui.content.Content;
 import com.intellij.util.ui.JBUI;
 import jwtly10.codeecho.callback.AsyncCallback;
@@ -17,17 +18,13 @@ import jwtly10.codeecho.model.ChatGPTRequest;
 import jwtly10.codeecho.model.ChatGPTRole;
 import jwtly10.codeecho.model.ChatGPTSession;
 import jwtly10.codeecho.persistance.ChatPersistence;
-import jwtly10.codeecho.service.AudioService;
 import jwtly10.codeecho.service.ProxyService;
-import jwtly10.codeecho.toolWindow.component.CustomButton;
 import jwtly10.codeecho.toolWindow.component.StreamMessageJPanel;
 import jwtly10.codeecho.toolWindow.ui.MessageWindowJPanel;
 import jwtly10.codeecho.toolWindow.utils.CColor;
 import org.jetbrains.annotations.NotNull;
 
 import javax.swing.*;
-import javax.swing.border.Border;
-import javax.swing.border.CompoundBorder;
 import java.awt.*;
 import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
@@ -35,10 +32,7 @@ import java.io.FileNotFoundException;
 import java.net.http.HttpClient;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import static jwtly10.codeecho.toolWindow.ui.CodeEchoUILogic.createRecordButton;
 
 public class CodeEchoToolWindowFactory implements ToolWindowFactory, DumbAware {
 
@@ -52,11 +46,13 @@ public class CodeEchoToolWindowFactory implements ToolWindowFactory, DumbAware {
     }
 
     private static class CodeEchoToolWindowContent {
+        final String PLACEHOLDER = "Ask CodeEcho anything...";
         private final JPanel mainContentPanel = new JPanel();
         private static ChatGPTSession currentSession;
         private MessageWindowJPanel messageWindowJPanel;
         private final JLabel noChatsLabel = new JLabel("Get started by asking CodeEcho a question!");
         private static JButton newSessionButton;
+        private static final JTextArea mainInputField = new JTextArea();
         private List<ChatGPTSession> sessions = new ArrayList<>();
         private volatile boolean isCancelled = false;
         private volatile boolean isRequestingChatGPT = false;
@@ -148,6 +144,7 @@ public class CodeEchoToolWindowFactory implements ToolWindowFactory, DumbAware {
             tmpPanel.setLayout(new BorderLayout());
             noChatsLabel.setBorder(JBUI.Borders.empty(10));
             tmpPanel.add(newSessionButton, BorderLayout.CENTER);
+            noChatsLabel.setFont(new Font("Arial", Font.PLAIN, 15));
             tmpPanel.add(noChatsLabel, BorderLayout.SOUTH);
             noChatsLabel.setVisible(true);
 
@@ -161,43 +158,41 @@ public class CodeEchoToolWindowFactory implements ToolWindowFactory, DumbAware {
 
         public JPanel createInputPanel() {
             JPanel inputPanel = new JPanel();
-            inputPanel.setLayout(new BoxLayout(inputPanel, BoxLayout.Y_AXIS));
+            inputPanel.setBorder(BorderFactory.createMatteBorder(5, 0, 0, 0, JBColor.background().darker()));
+            SwingUtilities.invokeLater(() -> {
+                inputPanel.setOpaque(true);
+                inputPanel.setBackground(JBColor.background().darker());
+            });
+            inputPanel.setLayout(new BoxLayout(inputPanel, BoxLayout.X_AXIS));
 
-            JPanel metaInfoPanel = new JPanel();
-            metaInfoPanel.setLayout(new FlowLayout(FlowLayout.LEFT));
-            JLabel errorMsgLabel = new JLabel();
-            errorMsgLabel.setForeground(JBColor.RED);
-            metaInfoPanel.add(errorMsgLabel);
-            inputPanel.add(metaInfoPanel);
-
-            JPanel tmpPanel = new JPanel();
-            tmpPanel.setLayout(new BorderLayout());
-
-            JPanel innerPanel = new JPanel();
-            innerPanel.setLayout(new GridBagLayout());
-            GridBagConstraints gbc = new GridBagConstraints();
-
-            ImageIcon sendIcon = new ImageIcon(Objects.requireNonNull(getClass().getResource("/images/icons/icon-send-white.png")));
-            Image sendIconImage = sendIcon.getImage();
-            Image scaledInstance = sendIconImage.getScaledInstance(30, 30, java.awt.Image.SCALE_SMOOTH);
-            sendIcon = new ImageIcon(scaledInstance);
-
-            CustomButton sendButton = new CustomButton(sendIcon, CColor.GREEN);
-            sendButton.setPreferredSize(new Dimension(50, 50));
-
-            JTextArea mainInputField = new JTextArea();
-            mainInputField.setMargin(JBUI.insets(10));
-            mainInputField.setText("Message CodeEcho...");
             mainInputField.setLineWrap(true);
             mainInputField.setWrapStyleWord(true);
-            mainInputField.setBorder(BorderFactory.createLineBorder(CColor.BLACK));
-            mainInputField.setForeground(CColor.BLACK);
-            Border margin = JBUI.Borders.empty(10);
-            mainInputField.setBorder(new CompoundBorder(mainInputField.getBorder(), margin));
+            mainInputField.setRows(5);
+            mainInputField.setForeground(CColor.GREY);
+            mainInputField.setText(PLACEHOLDER);
+            mainInputField.setFont(new Font("Arial", Font.PLAIN, 15));
+            mainInputField.setMargin(JBUI.insets(7));
+
+            JBScrollPane scrollPane = new JBScrollPane(mainInputField);
+
+            inputPanel.add(scrollPane);
+
+            JPanel buttonPanel = new JPanel();
+            JButton sendButton = new JButton("Send");
+            buttonPanel.setOpaque(false);
+            sendButton.setOpaque(false);
+            buttonPanel.setLayout(new BorderLayout());
+            buttonPanel.setBorder(JBUI.Borders.empty(5));
+            buttonPanel.add(sendButton, BorderLayout.CENTER);
+
+            inputPanel.add(buttonPanel);
+
+            sendButton.setMaximumSize(new Dimension(sendButton.getMaximumSize().width, mainInputField.getPreferredSize().height));
+            scrollPane.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
             mainInputField.addFocusListener(new FocusListener() {
                 @Override
                 public void focusGained(FocusEvent e) {
-                    if (mainInputField.getText().equals("Message CodeEcho...")) {
+                    if (mainInputField.getText().equals(PLACEHOLDER)) {
                         mainInputField.setText("");
                         mainInputField.setForeground(CColor.BLACK);
                     }
@@ -206,8 +201,8 @@ public class CodeEchoToolWindowFactory implements ToolWindowFactory, DumbAware {
                 @Override
                 public void focusLost(FocusEvent e) {
                     if (mainInputField.getText().isEmpty()) {
-                        mainInputField.setForeground(CColor.BLACK);
-                        mainInputField.setText("Message CodeEcho...");
+                        mainInputField.setForeground(CColor.GREY);
+                        mainInputField.setText(PLACEHOLDER);
                     }
                 }
             });
@@ -224,50 +219,122 @@ public class CodeEchoToolWindowFactory implements ToolWindowFactory, DumbAware {
                 handleNewReq(mainInputField);
             });
 
-            AudioService audioService = new AudioService();
-
-            final boolean[] isRecording = {false};
-            final byte[][] audioData = new byte[1][];
-
-            JButton recordButton = createRecordButton(isRecording, audioData, audioService, errorMsgLabel, mainInputField);
-
-            gbc.fill = GridBagConstraints.HORIZONTAL;
-            gbc.weightx = 1.0;
-            gbc.gridx = 0;
-            gbc.gridy = 0;
-            innerPanel.add(mainInputField, gbc);
-
-            JPanel pinPanel = new JPanel();
-            pinPanel.setLayout(new BorderLayout());
-            gbc.fill = GridBagConstraints.VERTICAL;
-            gbc.weighty = 1.0;
-            gbc.gridx = 1;
-            gbc.gridy = 0;
-            innerPanel.add(pinPanel, gbc);
-            gbc.fill = GridBagConstraints.HORIZONTAL;
-
-            JPanel buttonPanel = new JPanel();
-            buttonPanel.setLayout(new BorderLayout());
-
-            JPanel buttonPanelInner = new JPanel();
-            buttonPanelInner.setLayout(new GridBagLayout());
-
-            gbc.weightx = 0;
-            gbc.gridx = 1;
-            gbc.gridy = 0;
-            buttonPanelInner.add(recordButton, gbc);
-            gbc.gridx = 2;
-            gbc.gridy = 0;
-            buttonPanelInner.add(sendButton, gbc);
-            buttonPanel.add(buttonPanelInner, BorderLayout.SOUTH);
-
-            pinPanel.add(buttonPanel, BorderLayout.SOUTH);
-
-            tmpPanel.add(innerPanel, BorderLayout.NORTH);
-            inputPanel.add(tmpPanel);
 
             return inputPanel;
+
         }
+
+
+//        public JPanel createInputPanel_old() {
+//            JPanel inputPanel = new JPanel();
+//            inputPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, CColor.BLACK));
+//            inputPanel.setLayout(new BoxLayout(inputPanel, BoxLayout.Y_AXIS));
+//
+//            JPanel metaInfoPanel = new JPanel();
+//            metaInfoPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, JBColor.PINK));
+//            metaInfoPanel.setLayout(new FlowLayout(FlowLayout.LEFT));
+//            JLabel errorMsgLabel = new JLabel();
+//            errorMsgLabel.setForeground(JBColor.RED);
+//            metaInfoPanel.add(errorMsgLabel);
+//            inputPanel.add(metaInfoPanel);
+//
+//            JPanel tmpPanel = new JPanel();
+//            tmpPanel.setLayout(new BorderLayout());
+//
+//            JPanel innerPanel = new JPanel();
+//            innerPanel.setLayout(new GridBagLayout());
+//            GridBagConstraints gbc = new GridBagConstraints();
+//
+//            ImageIcon sendIcon = new ImageIcon(Objects.requireNonNull(getClass().getResource("/images/icons/icon-send-white.png")));
+//            Image sendIconImage = sendIcon.getImage();
+//            Image scaledInstance = sendIconImage.getScaledInstance(30, 30, java.awt.Image.SCALE_SMOOTH);
+//            sendIcon = new ImageIcon(scaledInstance);
+//
+//            CustomButton sendButton = new CustomButton(sendIcon, CColor.GREEN);
+//            sendButton.setPreferredSize(new Dimension(50, 50));
+//
+//            JTextArea mainInputField = new JTextArea();
+//            mainInputField.setMargin(JBUI.insets(10));
+//            mainInputField.setText(PLACEHOLDER);
+//            mainInputField.setLineWrap(true);
+//            mainInputField.setWrapStyleWord(true);
+//            mainInputField.setForeground(CColor.BLACK);
+//            Border margin = JBUI.Borders.empty(10);
+//            mainInputField.setBorder(new CompoundBorder(mainInputField.getBorder(), margin));
+//            mainInputField.addFocusListener(new FocusListener() {
+//                @Override
+//                public void focusGained(FocusEvent e) {
+//                    if (mainInputField.getText().equals(PLACEHOLDER)) {
+//                        mainInputField.setText("");
+//                        mainInputField.setForeground(CColor.BLACK);
+//                    }
+//                }
+//
+//                @Override
+//                public void focusLost(FocusEvent e) {
+//                    if (mainInputField.getText().isEmpty()) {
+//                        mainInputField.setForeground(CColor.BLACK);
+//                        mainInputField.setText(PLACEHOLDER);
+//                    }
+//                }
+//            });
+//
+//            mainInputField.addKeyListener(new java.awt.event.KeyAdapter() {
+//                public void keyReleased(java.awt.event.KeyEvent evt) {
+//                    if ((evt.getKeyCode() == java.awt.event.KeyEvent.VK_ENTER) && evt.isControlDown()) {
+//                        handleNewReq(mainInputField);
+//                    }
+//                }
+//            });
+//
+//            sendButton.addActionListener(e -> {
+//                handleNewReq(mainInputField);
+//            });
+//
+//            AudioService audioService = new AudioService();
+//
+//            final boolean[] isRecording = {false};
+//            final byte[][] audioData = new byte[1][];
+//
+//            JButton recordButton = createRecordButton(isRecording, audioData, audioService, errorMsgLabel, mainInputField);
+//
+//            gbc.fill = GridBagConstraints.HORIZONTAL;
+//            gbc.weightx = 1.0;
+//            gbc.gridx = 0;
+//            gbc.gridy = 0;
+//            innerPanel.add(mainInputField, gbc);
+//
+//            JPanel pinPanel = new JPanel();
+//            pinPanel.setLayout(new BorderLayout());
+//            gbc.fill = GridBagConstraints.VERTICAL;
+//            gbc.weighty = 1.0;
+//            gbc.gridx = 1;
+//            gbc.gridy = 0;
+//            innerPanel.add(pinPanel, gbc);
+//            gbc.fill = GridBagConstraints.HORIZONTAL;
+//
+//            JPanel buttonPanel = new JPanel();
+//            buttonPanel.setLayout(new BorderLayout());
+//
+//            JPanel buttonPanelInner = new JPanel();
+//            buttonPanelInner.setLayout(new GridBagLayout());
+//
+//            gbc.weightx = 0;
+//            gbc.gridx = 1;
+//            gbc.gridy = 0;
+//            buttonPanelInner.add(recordButton, gbc);
+//            gbc.gridx = 2;
+//            gbc.gridy = 0;
+//            buttonPanelInner.add(sendButton, gbc);
+//            buttonPanel.add(buttonPanelInner, BorderLayout.SOUTH);
+//
+//            pinPanel.add(buttonPanel, BorderLayout.SOUTH);
+//
+//            tmpPanel.add(innerPanel, BorderLayout.NORTH);
+//            inputPanel.add(tmpPanel);
+//
+//            return inputPanel;
+//        }
 
         private void handleNewReq(JTextArea mainInputField) {
             if (isRequestingChatGPT) {
@@ -412,7 +479,7 @@ public class CodeEchoToolWindowFactory implements ToolWindowFactory, DumbAware {
         }
 
         private boolean canWeSendMessage(ChatGPTMessage message, JTextArea textField) {
-            return !(message.getContent() == null || message.getContent().isEmpty() || message.getContent().equals("Message CodeEcho..."));
+            return !(message.getContent() == null || message.getContent().isEmpty() || message.getContent().equals(PLACEHOLDER));
         }
 
         public void cancelOperation() {
