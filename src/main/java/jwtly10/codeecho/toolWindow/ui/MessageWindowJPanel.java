@@ -1,5 +1,6 @@
 package jwtly10.codeecho.toolWindow.ui;
 
+import com.intellij.ui.JBColor;
 import com.intellij.ui.components.JBScrollPane;
 import jwtly10.codeecho.model.ChatGPTMessage;
 import jwtly10.codeecho.toolWindow.component.ChatErrorJPanel;
@@ -22,24 +23,26 @@ public class MessageWindowJPanel extends JPanel {
         removeAll();
         setOpaque(false);
 
-        messagesPanel.setLayout(new GridBagLayout());
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.gridwidth = GridBagConstraints.REMAINDER;
-        gbc.weightx = 1;
-        gbc.weighty = 0;
+        messagesPanel.setLayout(new BorderLayout());
+
+
+
+        JPanel innerMessagesPanel = new JPanel();
+        innerMessagesPanel.setLayout(new BoxLayout(innerMessagesPanel, BoxLayout.Y_AXIS));
 
         for (ChatGPTMessage message : messages) {
             if (message.getContent().trim().isEmpty()) {
                 ChatErrorJPanel errorComponent = new ChatErrorJPanel("There was an error generating this response, please try again.");
-                messagesPanel.add(errorComponent, gbc);
+                innerMessagesPanel.add(errorComponent);
             } else {
                 MessageJPanel messageComponent = new MessageJPanel(message);
-                messagesPanel.add(messageComponent, gbc);
+                innerMessagesPanel.add(messageComponent);
             }
         }
 
-        gbc.weighty = 1;
-        messagesPanel.add(filler, gbc);
+        messagesPanel.add(innerMessagesPanel, BorderLayout.NORTH);
+
+        messagesPanel.add(filler, BorderLayout.CENTER);
 
         JBScrollPane scrollPane = new JBScrollPane(messagesPanel);
         scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
