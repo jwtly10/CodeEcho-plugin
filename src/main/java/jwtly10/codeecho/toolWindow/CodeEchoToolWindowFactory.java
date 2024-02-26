@@ -87,7 +87,6 @@ public class CodeEchoToolWindowFactory implements ToolWindowFactory, DumbAware {
             mainContentPanel.setLayout(new BorderLayout());
             mainContentPanel.add(newSessionButton, BorderLayout.NORTH);
             mainContentPanel.add(messageWindowJPanel, BorderLayout.CENTER);
-            mainContentPanel.setBorder(JBUI.Borders.empty(30));
             this.messageWindowJPanel.initialLoad(currentSession.getMessages());
             this.messageWindowJPanel.setBorder(JBUI.Borders.emptyBottom(30));
 
@@ -133,7 +132,6 @@ public class CodeEchoToolWindowFactory implements ToolWindowFactory, DumbAware {
                 sessions.add(currentSession);
             }
 
-            mainContentPanel.setBorder(JBUI.Borders.empty(30));
             JPanel tmpPanel = new JPanel();
             tmpPanel.setLayout(new BorderLayout());
             noChatsLabel.setBorder(JBUI.Borders.empty(10));

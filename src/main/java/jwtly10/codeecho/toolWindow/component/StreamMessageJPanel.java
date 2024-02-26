@@ -15,7 +15,6 @@ public class StreamMessageJPanel extends JPanel {
     public void setText(String htmlContent) {
         streamTextArea.setContentType("text/html");
         streamTextArea.setText(htmlContent);
-        streamTextArea.setPreferredSize(new Dimension(600, ComponentSharedUtils.getContentHeight(600, htmlContent)));
         revalidate();
         repaint();
     }
@@ -25,16 +24,14 @@ public class StreamMessageJPanel extends JPanel {
     }
 
     public StreamMessageJPanel() {
+        setLayout(new BorderLayout());
         init();
     }
 
     private void init() {
-        JPanel mainPanel = new JPanel();
-        mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.Y_AXIS));
-        LocalDateTime now = LocalDateTime.now();
-
         JPanel metaPanel = new JPanel();
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        LocalDateTime now = LocalDateTime.now();
         String formattedDate = now.format(formatter);
         JLabel timeLabel = new JLabel(formattedDate);
 
@@ -53,10 +50,8 @@ public class StreamMessageJPanel extends JPanel {
 
         msgPanel.add(streamTextArea);
 
-        mainPanel.add(metaPanel);
-        mainPanel.add(msgPanel);
-
-        add(mainPanel);
+        add(metaPanel, BorderLayout.NORTH);
+        add(msgPanel, BorderLayout.CENTER);
 
         revalidate();
         repaint();

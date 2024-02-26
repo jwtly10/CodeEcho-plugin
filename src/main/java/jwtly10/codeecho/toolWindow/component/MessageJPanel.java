@@ -4,7 +4,6 @@ import com.intellij.ui.JBColor;
 import jwtly10.codeecho.model.ChatGPTMessage;
 import jwtly10.codeecho.model.ChatGPTRole;
 import jwtly10.codeecho.service.ParserService;
-import jwtly10.codeecho.toolWindow.component.ComponentSharedUtils;
 
 import javax.swing.*;
 import javax.swing.border.Border;

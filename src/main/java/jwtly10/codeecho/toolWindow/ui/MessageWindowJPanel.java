@@ -1,6 +1,5 @@
 package jwtly10.codeecho.toolWindow.ui;
 
-import com.intellij.ui.JBColor;
 import com.intellij.ui.components.JBScrollPane;
 import jwtly10.codeecho.model.ChatGPTMessage;
 import jwtly10.codeecho.toolWindow.component.ChatErrorJPanel;
@@ -13,6 +12,7 @@ import java.util.List;
 
 public class MessageWindowJPanel extends JPanel {
     private final JPanel messagesPanel = new JPanel();
+    private final JPanel innerMessagesPanel = new JPanel();
     private Component filler = Box.createVerticalGlue();
 
     public MessageWindowJPanel() {
@@ -24,10 +24,6 @@ public class MessageWindowJPanel extends JPanel {
         setOpaque(false);
 
         messagesPanel.setLayout(new BorderLayout());
-
-
-
-        JPanel innerMessagesPanel = new JPanel();
         innerMessagesPanel.setLayout(new BoxLayout(innerMessagesPanel, BoxLayout.Y_AXIS));
 
         for (ChatGPTMessage message : messages) {
@@ -41,7 +37,6 @@ public class MessageWindowJPanel extends JPanel {
         }
 
         messagesPanel.add(innerMessagesPanel, BorderLayout.NORTH);
-
         messagesPanel.add(filler, BorderLayout.CENTER);
 
         JBScrollPane scrollPane = new JBScrollPane(messagesPanel);
@@ -57,79 +52,62 @@ public class MessageWindowJPanel extends JPanel {
         scrollToBottom();
     }
 
-    public void removeOldestMessage() {
-        Component[] components = messagesPanel.getComponents();
-        if (components.length > 0) {
-            messagesPanel.remove(components[0]);
-            messagesPanel.revalidate();
-            messagesPanel.repaint();
-        }
-    }
-
-    public void addNewErrorMessage(String errorMessage) {
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.gridwidth = GridBagConstraints.REMAINDER;
-        gbc.weightx = 1;
-        gbc.weighty = 0;
-
-        if (filler != null) {
-            messagesPanel.remove(filler);
-        }
-
-        ChatErrorJPanel errorComponent = new ChatErrorJPanel(errorMessage);
-        messagesPanel.add(errorComponent, gbc);
-
-        filler = Box.createVerticalGlue();
-        gbc.weighty = 1;
-        messagesPanel.add(filler, gbc);
-
-        messagesPanel.revalidate();
-        messagesPanel.repaint();
-
-        scrollToBottom();
-    }
-
     public void addNewMessage(ChatGPTMessage message) {
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.gridwidth = GridBagConstraints.REMAINDER;
-        gbc.weightx = 1;
-        gbc.weighty = 0;
-
         if (filler != null) {
             messagesPanel.remove(filler);
         }
 
         MessageJPanel messageComponent = new MessageJPanel(message);
-        messagesPanel.add(messageComponent, gbc);
+        innerMessagesPanel.add(messageComponent);
 
         filler = Box.createVerticalGlue();
-        gbc.weighty = 1;
-        messagesPanel.add(filler, gbc);
+        messagesPanel.add(filler, BorderLayout.CENTER);
 
-        messagesPanel.revalidate();
-        messagesPanel.repaint();
+        revalidate();
+        repaint();
 
         scrollToBottom();
     }
 
-    public void addNewStreamComponent(StreamMessageJPanel streamMessageComponent) {
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.gridwidth = GridBagConstraints.REMAINDER;
-        gbc.weightx = 1;
-        gbc.weighty = 0;
+    public void removeOldestMessage() {
+        Component[] components = innerMessagesPanel.getComponents();
+        if (components.length > 0) {
+            innerMessagesPanel.remove(components[0]);
+            innerMessagesPanel.revalidate();
+            innerMessagesPanel.repaint();
+        }
+    }
 
+    public void addNewErrorMessage(String errorMessage) {
         if (filler != null) {
             messagesPanel.remove(filler);
         }
 
-        messagesPanel.add(streamMessageComponent, gbc);
+        ChatErrorJPanel errorComponent = new ChatErrorJPanel(errorMessage);
+        innerMessagesPanel.add(errorComponent);
 
         filler = Box.createVerticalGlue();
-        gbc.weighty = 1;
-        messagesPanel.add(filler, gbc);
+        messagesPanel.add(filler);
 
-        messagesPanel.revalidate();
-        messagesPanel.repaint();
+        revalidate();
+        repaint();
+
+        scrollToBottom();
+    }
+
+
+    public void addNewStreamComponent(StreamMessageJPanel streamMessageComponent) {
+        if (filler != null) {
+            messagesPanel.remove(filler);
+        }
+
+        innerMessagesPanel.add(streamMessageComponent);
+
+        filler = Box.createVerticalGlue();
+        messagesPanel.add(filler);
+
+        revalidate();
+        repaint();
 
         scrollToBottom();
     }
